@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -6,7 +7,8 @@ import 'package:tangem_sdk/tangem_sdk_plugin.dart';
 
 class SdkBridge {
   final _psNotificationSender = PublishSubject<String>();
-  final Utils utils = Utils();
+  final Utils _utils = Utils();
+  final _jsonEncoder = JsonEncoder.withIndent('  ');
 
   Callback _callback;
   String _cardId;
@@ -19,7 +21,8 @@ class SdkBridge {
         if (response is CardResponse) {
           _cardId = response.cardId;
         }
-        print(response);
+        final prettyJson = _jsonEncoder.convert(response.toJson());
+        prettyJson.split("\n").forEach((element) => print(element));
       }, (error) {
         if (error is ErrorResponse) {
           print(error.localizedDescription);
@@ -35,7 +38,7 @@ class SdkBridge {
   }
 
   sign() {
-    final listOfData = List.generate(utils.randomInt(1, 10), (index) => utils.randomString(20));
+    final listOfData = List.generate(_utils.randomInt(1, 10), (index) => _utils.randomString(20));
     final listOfHashes = listOfData.map((e) => e.toHexString()).toList();
     TangemSdk.sign(_callback, {
       TangemSdk.cid: _cardId,
@@ -55,13 +58,13 @@ class SdkBridge {
       return;
     }
 
-    final issuerData = utils.randomString(utils.randomInt(15, 30)).toBytes();
+    final issuerData = _utils.randomString(_utils.randomInt(15, 30)).toBytes();
     final counter = 1;
 
     TangemSdk.writeIssuerData(_callback, {
       TangemSdk.cid: _cardId,
       TangemSdk.issuerDataHex: issuerData.toHexString(),
-      TangemSdk.issuerPrivateKeyHex: utils.issuerPrivateKeyHex,
+      TangemSdk.issuerPrivateKeyHex: _utils.issuerPrivateKeyHex,
       TangemSdk.issuerDataCounter: counter,
     });
   }
@@ -78,13 +81,13 @@ class SdkBridge {
       return;
     }
 
-    final issuerExData = utils.randomBytes(1524, secure: true);
+    final issuerExData = _utils.randomBytes(1524, secure: true);
     final counter = 1;
 
     TangemSdk.writeIssuerExData(_callback, {
       TangemSdk.cid: _cardId,
       TangemSdk.issuerExDataHex: issuerExData.toHexString(),
-      TangemSdk.issuerPrivateKeyHex: utils.issuerPrivateKeyHex,
+      TangemSdk.issuerPrivateKeyHex: _utils.issuerPrivateKeyHex,
       TangemSdk.issuerDataCounter: counter,
     });
   }
