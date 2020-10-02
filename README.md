@@ -63,7 +63,7 @@ Callback callback = Callback((success) {
 ```
 
 #### Scan card
-Method `TangemSdk.scanCard()` is needed to obtain information from the Tangem card. Optionally, if the card contains a wallet (private and public key pair), it proves that the wallet owns a private key that corresponds to a public one.
+Scan card is needed to obtain information from the Tangem card. Optionally, if the card contains a wallet (private and public key pair), it proves that the wallet owns a private key that corresponds to a public one.
 
 ```dart
 TangemSdk.scanCard(callback);
@@ -124,7 +124,7 @@ Writes 512-byte Issuer_Data field to the card.
 | ------------ | ------------ |
 | issuerData | Data to be written to the card (hex) |
 | issuerDataSignature | Issuer’s signature of issuerData with `Issuer_Data_PrivateKey`(hex) |
-| issuerDataCounter | An optional counter that protect issuer data against replay attack. When flag Protect_Issuer_Data_Against_Replay set in the card configuration then this value is mandatory and must increase on each execution of `writeIssuerData` command.  |
+| issuerDataCounter | *(Optional)* Counter that protect issuer data against replay attack. When flag `Protect_Issuer_Data_Against_Replay` set in the card configuration then this value is mandatory and must increase on each execution of `writeIssuerData` command.  |
 | cardId | *(Optional)* If cardId is passed, the writeIssuerData command will be performed only if the card has the same id  |
 
 ```dart
@@ -140,7 +140,7 @@ If 512 bytes are not enough, you can use this method to save up to 40 kylobytes.
 | Parameter | Description |
 | ------------ | ------------ |
 | issuerData | Data to be written to the card (hex)|
-| startingSignature | Issuer’s signature of `SHA256(cardId, Size)` or `SHA256(cardId | Size | issuerDataCounter)` with `Issuer_Data_PrivateKey` (hex)|
+| startingSignature | Issuer’s signature of `SHA256(cardId, Size)` or `SHA256(cardId, Size, issuerDataCounter)` with `Issuer_Data_PrivateKey` (hex)|
 | finalizingSignature | Issuer’s signature of `SHA256(cardId, issuerData)` or `SHA256(cardId, issuerData, issuerDataCounter)` with `Issuer_Data_PrivateKey` (hex)|
 | issuerDataCounter | *(Optional)* Сounter that protect issuer data against replay attack. When flag Protect_Issuer_Data_Against_Replay set in the card configuration then this value is mandatory and must increase on each execution of `writeIssuerData` command.  |
 | cardId | *(Optional)* If cardId is passed, the writeIssuerExtraData command will be performed only if the card has the same id  |
@@ -205,7 +205,8 @@ TangemSdk.readUserData(callback, {TangemSdk.cid: cardId});
 ```
 
 #### Pin codes
-*Access code (PIN1)* restricts access to the whole card. App must submit the correct value of Access code in each command. 
+*Access code (PIN1)* restricts access to the whole card. App must submit the correct value of Access code in each command.
+
 *Passcode (PIN2)* is required to sign a transaction or to perform some other commands entailing a change of the card state.
 
 
