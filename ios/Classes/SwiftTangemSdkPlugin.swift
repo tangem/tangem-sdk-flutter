@@ -64,7 +64,11 @@ public class SwiftTangemsdkPlugin: NSObject, FlutterPlugin {
         }
         
         let hashes = hexHashes.compactMap({Data(hexString: $0)})
-        sdk.sign(hashes: hashes, initialMessage: getArg(.initialMessage, from: args)) { [weak self] result in
+        sdk.sign(hashes: hashes,
+                 initialMessage: getArg(.initialMessage, from: args),
+                 pin1: getArg(.pin1, from: args),
+                 pin2: getArg(.pin2, from: args)
+        ) { [weak self] result in
             self?.handleCompletion(result, completion)
         }
     }
@@ -120,27 +124,16 @@ public class SwiftTangemsdkPlugin: NSObject, FlutterPlugin {
     
     private func writeIssuerData(_ args: Any?, _ completion: @escaping FlutterResult) {
         guard let issuerData: Data = getArg(.issuerData, from: args),
-            let issuerKey: Data = getArg(.issuerPrivateKey, from: args),
+            let issuerSig: Data = getArg(.issuerDataSignature, from: args),
             let cid: String = getArg(.cid, from: args) else {
                 handleMissingArgs(completion)
                 return
         }
         
-        let counter: Int? = getArg(.issuerDataCounter, from: args)
-        var dataToSign = Data(hexString: cid) + issuerData
-        if let counter = counter {
-            dataToSign += counter.bytes4
-        }
-        
-        guard let sig = Secp256k1Utils.sign(dataToSign, with: issuerKey) else {
-            handleSignError(completion)
-            return
-        }
-        
         sdk.writeIssuerData(cardId: cid,
                             issuerData: issuerData,
-                            issuerDataSignature: sig,
-                            issuerDataCounter: counter,
+                            issuerDataSignature: issuerSig,
+                            issuerDataCounter: getArg(.issuerDataCounter, from: args),
                             initialMessage: getArg(.initialMessage, from: args),
                             pin1: getArg(.pin1, from: args)) { [weak self] result in
                                 self?.handleCompletion(result, completion)
@@ -156,35 +149,19 @@ public class SwiftTangemsdkPlugin: NSObject, FlutterPlugin {
     }
     
     private func writeIssuerExData(_ args: Any?, _ completion: @escaping FlutterResult) {
-        guard /*let issuerData: Data = getArg(.issuerData, from: args),*/ //TODO: From app
-            let issuerKey: Data = getArg(.issuerPrivateKey, from: args),
+        guard let issuerData: Data = getArg(.issuerData, from: args),
+            let startSig: Data = getArg(.startingSignature, from: args),
+            let finalSig: Data = getArg(.finalizingSignature, from: args),
             let cid: String = getArg(.cid, from: args) else {
                 handleMissingArgs(completion)
                 return
         }
-        let issuerData = try! CryptoUtils.generateRandomBytes(count: 7620) //Single write size * 5
-        let counter: Int? = getArg(.issuerDataCounter, from: args)
-        
-        var startDataToSign = Data(hexString: cid)
-        var finalDataToSign = startDataToSign + issuerData
-        
-        if let counter = counter {
-            startDataToSign += counter.bytes4 + issuerData.count.bytes2
-            finalDataToSign += counter.bytes4
-        }
-        
-        guard let startSig = Secp256k1Utils.sign(startDataToSign, with: issuerKey),
-            let finalSig = Secp256k1Utils.sign(finalDataToSign, with: issuerKey) else {
-                handleSignError(completion)
-                return
-        }
-        
-        
+    
         sdk.writeIssuerExtraData(cardId: cid,
                                  issuerData: issuerData,
                                  startingSignature: startSig,
                                  finalizingSignature: finalSig,
-                                 issuerDataCounter: counter,
+                                 issuerDataCounter: getArg(.issuerDataCounter, from: args),
                                  initialMessage: getArg(.initialMessage, from: args),
                                  pin1: getArg(.pin1, from: args)){ [weak self] result in
                                     self?.handleCompletion(result, completion)
@@ -264,11 +241,6 @@ public class SwiftTangemsdkPlugin: NSObject, FlutterPlugin {
         completion(FlutterError(code: "\(missingArgsError.code)", message: missingArgsError.localizedDescription, details: missingArgsError.jsonDescription))
     }
     
-    private func handleSignError(_ completion: @escaping FlutterResult) {
-        let error = PluginError(code: 9998, localizedDescription: "Failed to sign data")
-        completion(FlutterError(code: "\(error.code)", message: error.localizedDescription, details: error.jsonDescription))
-    }
-    
     private func getArg<T: Decodable>(_ key: ArgKey, from arguments: Any?) -> T? {
         if let value = (arguments as? [String: Any])?[key.rawValue] {
             if T.self == Data.self {
@@ -313,7 +285,9 @@ public class SwiftTangemsdkPlugin: NSObject, FlutterPlugin {
         case issuerDataCounter
         case userProtectedData
         case issuerData
-        case issuerPrivateKey
+        case issuerDataSignature
+        case startingSignature
+        case finalizingSignature
         case issuer
         case manufacturer
         case acquirer
