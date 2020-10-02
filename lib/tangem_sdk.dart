@@ -32,18 +32,19 @@ class TangemSdk {
   static const initialMessage = "initialMessage";
   static const initialMessageHeader = "header";
   static const initialMessageBody = "body";
-  static const hashesHex = "hashes";
+  static const hashes = "hashes";
   static const cardConfig = "cardConfig";
   static const issuer = "issuer";
   static const manufacturer = "manufacturer";
   static const acquirer = "acquirer";
-  static const issuerDataHex = "issuerData";
-  static const issuerExDataHex = "issuerExData";
+  static const issuerData = "issuerData";
+  static const issuerDataSignature = "issuerDataSignature";
+  static const startingSignature = "startingSignature";
+  static const finalizingSignature = "finalizingSignature";
   static const issuerDataCounter = "issuerDataCounter";
-  static const issuerPrivateKeyHex = "issuerPrivateKey";
-  static const userDataHex = "userData";
+  static const userData = "userData";
   static const userCounter = "userCounter";
-  static const userProtectedDataHex = "userProtectedData";
+  static const userProtectedData = "userProtectedData";
   static const userProtectedCounter = "userProtectedCounter";
   static const pinCode = "pinCode";
 
@@ -65,26 +66,27 @@ class TangemSdk {
         .catchError((error) => _sendBackError(callback, error));
   }
 
-  static Future sign(Callback callback, [Map<String, dynamic> valuesToExport]) async {
+  static Future sign(Callback callback, List<String> hashesHex, [Map<String, dynamic> valuesToExport]) async {
+    valuesToExport[hashes] = hashesHex;
     _channel
         .invokeMethod(cSign, valuesToExport)
         .then((result) => callback.onSuccess(_createResponse(cSign, result)))
         .catchError((error) => _sendBackError(callback, error));
   }
 
-  static Future personalize(Callback callback, [Map<String, dynamic> valuesToExport]) async {
-    _channel
-        .invokeMethod(cPersonalize, valuesToExport)
-        .then((result) => callback.onSuccess(_createResponse(cPersonalize, result)))
-        .catchError((error) => _sendBackError(callback, error));
-  }
+  // static Future personalize(Callback callback, [Map<String, dynamic> valuesToExport]) async {
+  //   _channel
+  //       .invokeMethod(cPersonalize, valuesToExport)
+  //       .then((result) => callback.onSuccess(_createResponse(cPersonalize, result)))
+  //       .catchError((error) => _sendBackError(callback, error));
+  // }
 
-  static Future depersonalize(Callback callback, [Map<String, dynamic> valuesToExport]) async {
-    _channel
-        .invokeMethod(cDepersonalize, valuesToExport)
-        .then((result) => callback.onSuccess(_createResponse(cDepersonalize, result)))
-        .catchError((error) => _sendBackError(callback, error));
-  }
+  // static Future depersonalize(Callback callback, [Map<String, dynamic> valuesToExport]) async {
+  //   _channel
+  //       .invokeMethod(cDepersonalize, valuesToExport)
+  //       .then((result) => callback.onSuccess(_createResponse(cDepersonalize, result)))
+  //       .catchError((error) => _sendBackError(callback, error));
+  // }
 
   static Future createWallet(Callback callback, [Map<String, dynamic> valuesToExport]) async {
     _channel
@@ -107,7 +109,10 @@ class TangemSdk {
         .catchError((error) => _sendBackError(callback, error));
   }
 
-  static Future writeIssuerData(Callback callback, [Map<String, dynamic> valuesToExport]) async {
+  static Future writeIssuerData(Callback callback, String issuerDataHex, String issuerDataSignatureHex,
+      [Map<String, dynamic> valuesToExport]) async {
+    valuesToExport[issuerData] = issuerDataHex;
+    valuesToExport[issuerDataSignature] = issuerDataSignatureHex;
     _channel
         .invokeMethod(cWriteIssuerData, valuesToExport)
         .then((result) => callback.onSuccess(_createResponse(cWriteIssuerData, result)))
@@ -121,28 +126,36 @@ class TangemSdk {
         .catchError((error) => _sendBackError(callback, error));
   }
 
-  static Future writeUserData(Callback callback, [Map<String, dynamic> valuesToExport]) async {
+  static Future writeUserData(Callback callback, String userDataHex, [Map<String, dynamic> valuesToExport]) async {
+    valuesToExport[userData] = userDataHex;
     _channel
         .invokeMethod(cWriteUserData, valuesToExport)
         .then((result) => callback.onSuccess(_createResponse(cWriteUserData, result)))
         .catchError((error) => _sendBackError(callback, error));
   }
 
-  static Future writeUserProtectedData(Callback callback, [Map<String, dynamic> valuesToExport]) async {
+  static Future writeUserProtectedData(Callback callback, String userProtectedDataHex,
+      [Map<String, dynamic> valuesToExport]) async {
+    valuesToExport[userProtectedData] = userProtectedDataHex;
     _channel
         .invokeMethod(cWriteUserProtectedData, valuesToExport)
         .then((result) => callback.onSuccess(_createResponse(cWriteUserData, result)))
         .catchError((error) => _sendBackError(callback, error));
   }
 
-  static Future readIssuerExData(Callback callback, [Map<String, dynamic> valuesToExport]) async {
+  static Future readIssuerExtraData(Callback callback, [Map<String, dynamic> valuesToExport]) async {
     _channel
         .invokeMethod(cReadIssuerExData, valuesToExport)
         .then((result) => callback.onSuccess(_createResponse(cReadIssuerExData, result)))
         .catchError((error) => _sendBackError(callback, error));
   }
 
-  static Future writeIssuerExData(Callback callback, [Map<String, dynamic> valuesToExport]) async {
+  static Future writeIssuerExtraData(
+      Callback callback, String issuerDataHex, String startingSignatureHex, String finalizingSignatureHex,
+      [Map<String, dynamic> valuesToExport]) async {
+    valuesToExport[issuerData] = issuerDataHex;
+    valuesToExport[startingSignature] = startingSignatureHex;
+    valuesToExport[finalizingSignature] = finalizingSignatureHex;
     _channel
         .invokeMethod(cWriteIssuerExData, valuesToExport)
         .then((result) => callback.onSuccess(_createResponse(cWriteIssuerExData, result)))

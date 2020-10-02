@@ -19,8 +19,6 @@ import com.tangem.common.CompletionResult
 import com.tangem.common.extensions.CardType
 import com.tangem.common.extensions.calculateSha256
 import com.tangem.common.extensions.hexToBytes
-import com.tangem.common.extensions.toByteArray
-import com.tangem.crypto.sign
 import com.tangem.tangem_sdk_new.DefaultSessionViewDelegate
 import com.tangem.tangem_sdk_new.NfcLifecycleObserver
 import com.tangem.tangem_sdk_new.TerminalKeysStorage
@@ -85,19 +83,19 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       "allowsOnlyDebugCards" -> allowsOnlyDebugCards(call, result)
       "scanCard" -> scanCard(call, result)
       "sign" -> sign(call, result)
-      "personalize" -> personalize(call, result)
-      "depersonalize" -> depersonalize(call, result)
-      "createWallet" -> createWallet(call, result)
-      "purgeWallet" -> purgeWallet(call, result)
       "readIssuerData" -> readIssuerData(call, result)
       "writeIssuerData" -> writeIssuerData(call, result)
-      "readIssuerExData" -> readIssuerExData(call, result)
-      "writeIssuerExData" -> writeIssuerExData(call, result)
+      "readIssuerExData" -> readIssuerExtraData(call, result)
+      "writeIssuerExData" -> writeIssuerExtraData(call, result)
       "readUserData" -> readUserData(call, result)
       "writeUserData" -> writeUserData(call, result)
       "writeUserProtectedData" -> writeUserProtectedData(call, result)
+      "createWallet" -> createWallet(call, result)
+      "purgeWallet" -> purgeWallet(call, result)
       "setPin1" -> setPin1(call, result)
       "setPin2" -> setPin2(call, result)
+      //      "personalize" -> personalize(call, result)
+      //      "depersonalize" -> depersonalize(call, result)
       "getPlatformVersion" -> result.success("Android ${android.os.Build.VERSION.RELEASE}")
       else -> result.notImplemented()
     }
@@ -166,11 +164,10 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 
   private fun writeIssuerData(call: MethodCall, result: Result) {
     try {
-      val cardId = cid(call) !!
-      val issuerData = issuerData(call)
+      val issuerData = hexDataToBytes(call, "issuerData")
+      val dataSignature = hexDataToBytes(call, "issuerDataSignature")
+      val cardId = cid(call)
       val counter = issuerDataCounter(call)
-      val issuerPrivateKey = issuerPrivateKey(call)
-      val dataSignature = issuerDataSignature(cardId, issuerData, counter, issuerPrivateKey)
 
       sdk.writeIssuerData(
           cardId,
@@ -183,7 +180,7 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     }
   }
 
-  private fun readIssuerExData(call: MethodCall, result: Result) {
+  private fun readIssuerExtraData(call: MethodCall, result: Result) {
     try {
       sdk.readIssuerExtraData(cid(call)) { handleResult(result, it) }
     } catch (ex: Exception) {
@@ -191,18 +188,15 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     }
   }
 
-  private fun writeIssuerExData(call: MethodCall, result: Result) {
+  private fun writeIssuerExtraData(call: MethodCall, result: Result) {
     try {
       // from app
-      val cardId = cid(call) !!
-      val dataCounter = issuerDataCounter(call) ?: 1
-      val hexCardId = cardId.hexToBytes()
-      val issuerExData = issuerExData(call)
+      val issuerExData = hexDataToBytes(call, "issuerData")
+      val startingSignature = hexDataToBytes(call, "startingSignature")
+      val finalizingSignature = hexDataToBytes(call, "finalizingSignature")
 
-      val counter = dataCounter.toByteArray(4)
-      val issuerPrivateKey = issuerPrivateKey(call)
-      val startingSignature = (hexCardId + counter + issuerExData.size.toByteArray(2)).sign(issuerPrivateKey)
-      val finalizingSignature = (hexCardId + issuerExData + counter).sign(issuerPrivateKey)
+      val cardId = cid(call)
+      val dataCounter = issuerDataCounter(call) ?: 1
 
       sdk.writeIssuerExtraData(
           cardId,
@@ -226,7 +220,8 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 
   private fun writeUserData(call: MethodCall, result: Result) {
     try {
-      sdk.writeUserData(cid(call), userData(call), userCounter(call), message(call)) { handleResult(result, it) }
+      val userData = hexDataToBytes(call, "userData")
+      sdk.writeUserData(cid(call), userData, userCounter(call), message(call)) { handleResult(result, it) }
     } catch (ex: Exception) {
       handleException(result, ex)
     }
@@ -250,7 +245,8 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 
   private fun writeUserProtectedData(call: MethodCall, result: Result) {
     try {
-      sdk.writeUserProtectedData(cid(call), userProtectedData(call), userProtectedCounter(call), message(call)) {
+      val userProtectedData = hexDataToBytes(call, "userProtectedData")
+      sdk.writeUserProtectedData(cid(call), userProtectedData, userProtectedCounter(call), message(call)) {
         handleResult(result, it)
       }
     } catch (ex: Exception) {
@@ -341,44 +337,12 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     @Throws(Exception::class)
-    fun issuerData(call: MethodCall): ByteArray {
-      return nullSafeFetchHexStringAndConvertToBytes(call, "issuerData")
-    }
-
-    @Throws(Exception::class)
-    fun issuerExData(call: MethodCall): ByteArray {
-      return nullSafeFetchHexStringAndConvertToBytes(call, "issuerExData")
-    }
-
-    @Throws(Exception::class)
-    fun issuerDataSignature(cardId: String, issuerData: ByteArray, counter: Int?, issuerPrivateKey: ByteArray): ByteArray {
-      var mergedData = cardId.hexToBytes() + issuerData
-      counter?.let { mergedData += it.toByteArray(4) }
-      return mergedData.sign(issuerPrivateKey)
-    }
-
-    @Throws(Exception::class)
     fun issuerDataCounter(call: MethodCall): Int? {
-      if (! call.hasArgument("issuerDataCounter")) return null
-
       return call.argument<Int>("issuerDataCounter")
-    }
-
-    @Throws(Exception::class)
-    fun issuerPrivateKey(call: MethodCall): ByteArray {
-      return nullSafeFetchHexStringAndConvertToBytes(call, "issuerPrivateKey")
-    }
-
-    fun userData(call: MethodCall): ByteArray {
-      return nullSafeFetchHexStringAndConvertToBytes(call, "userData")
     }
 
     fun userCounter(call: MethodCall): Int? {
       return call.argument<Int>("userCounter")
-    }
-
-    fun userProtectedData(call: MethodCall): ByteArray {
-      return nullSafeFetchHexStringAndConvertToBytes(call, "userProtectedData")
     }
 
     fun userProtectedCounter(call: MethodCall): Int? {
@@ -391,28 +355,11 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       return call.argument<String>("pinCode")?.calculateSha256()
     }
 
-    //    @Throws(Exception::class)
-    //    fun startingSignature(jsO: JSONObject): ByteArray? {
-    //      return fetchHexStringAndConvertToBytes(jsO, "startingSignature")
-    //    }
-    //
-    //    @Throws(Exception::class)
-    //    fun finalizingSignature(jsO: JSONObject): ByteArray? {
-    //      return fetchHexStringAndConvertToBytes(jsO, "finalizingSignature")
-    //    }
-
     @Throws(Exception::class)
-    private fun nullSafeFetchHexStringAndConvertToBytes(call: MethodCall, name: String): ByteArray {
+    private fun hexDataToBytes(call: MethodCall, name: String): ByteArray {
       assert(call, name)
       val hexString = call.argument<String>(name) !!
       return hexString.hexToBytes()
-    }
-
-    @Throws(Exception::class)
-    private fun fetchHexStringAndConvertToBytes(call: MethodCall, name: String): ByteArray? {
-      assert(call, name)
-      val hexString = call.argument<String>(name)
-      return hexString?.hexToBytes()
     }
 
     @Throws(Exception::class)

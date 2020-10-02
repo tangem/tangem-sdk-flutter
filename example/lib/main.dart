@@ -38,11 +38,11 @@ class _CommandListWidgetState extends State<CommandListWidget> {
   void initState() {
     super.initState();
 
-    _callback = Callback((response) {
-      if (response is CardResponse) {
-        _cardId = response.cardId;
+    _callback = Callback((success) {
+      if (success is CardResponse) {
+        _cardId = success.cardId;
       }
-      final prettyJson = _jsonEncoder.convert(response.toJson());
+      final prettyJson = _jsonEncoder.convert(success.toJson());
       prettyJson.split("\n").forEach((element) => print(element));
     }, (error) {
       if (error is ErrorResponse) {
@@ -78,8 +78,8 @@ class _CommandListWidgetState extends State<CommandListWidget> {
           ActionType("Issuer extra data"),
           RowActions(
             [
-              ActionButton(text: "Read", action: handleReadIssuerExData),
-              ActionButton(text: "Write", action: handleWriteIssuerExData),
+              ActionButton(text: "Read", action: handleReadIssuerExtraData),
+              ActionButton(text: "Write", action: handleWriteIssuerExtraData),
             ],
           ),
           ActionType("User data"),
@@ -113,17 +113,14 @@ class _CommandListWidgetState extends State<CommandListWidget> {
   }
 
   handleScanCard() {
-    TangemSdk.scanCard(_callback, {});
+    TangemSdk.scanCard(_callback);
   }
 
   handleSign() {
     final listOfData = List.generate(_utils.randomInt(1, 10), (index) => _utils.randomString(20));
     final listOfHashes = listOfData.map((e) => e.toHexString()).toList();
 
-    TangemSdk.sign(_callback, {
-      TangemSdk.cid: _cardId,
-      TangemSdk.hashesHex: listOfHashes,
-    });
+    TangemSdk.sign(_callback, listOfHashes, {TangemSdk.cid: _cardId});
   }
 
   handleReadIssuerData() {
@@ -136,34 +133,35 @@ class _CommandListWidgetState extends State<CommandListWidget> {
       return;
     }
 
-    final issuerData = _utils.randomString(_utils.randomInt(15, 30)).toBytes();
+    final issuerData = "Issuer data to be written on a card";
+    final issuerDataSignature = "(cardId.bytes + issuerData.bytes + counter.bytes(4)).sign(issuerPrivateKey)";
     final counter = 1;
 
-    TangemSdk.writeIssuerData(_callback, {
+    TangemSdk.writeIssuerData(_callback, issuerData.toHexString(), issuerDataSignature.toHexString(), {
       TangemSdk.cid: _cardId,
-      TangemSdk.issuerDataHex: issuerData.toHexString(),
-      TangemSdk.issuerPrivateKeyHex: _utils.issuerPrivateKeyHex,
       TangemSdk.issuerDataCounter: counter,
     });
   }
 
-  handleReadIssuerExData() {
-    TangemSdk.readIssuerExData(_callback, {TangemSdk.cid: _cardId});
+  handleReadIssuerExtraData() {
+    TangemSdk.readIssuerExtraData(_callback, {TangemSdk.cid: _cardId});
   }
 
-  handleWriteIssuerExData() {
+  handleWriteIssuerExtraData() {
     if (_cardId == null) {
       _showToast("CardId required. Scan your card before proceeding");
       return;
     }
 
-    final issuerExData = _utils.randomBytes(1524 * 5, secure: true);
+    final issuerExtraData = "Issuer extra data to be written on a card";
+    final startingSignature =
+        "(cardId.bytes + counter.bytes(4) + issuerData.bytes.size.bytes(2)).sign(issuerPrivateKey)";
+    final finalizingSignature = "(cardId.bytes + issuerData.bytes + counter.bytes(4)).sign(issuerPrivateKey)";
     final counter = 1;
 
-    TangemSdk.writeIssuerExData(_callback, {
+    TangemSdk.writeIssuerExtraData(
+        _callback, issuerExtraData.toHexString(), startingSignature.toHexString(), finalizingSignature.toHexString(), {
       TangemSdk.cid: _cardId,
-      TangemSdk.issuerExDataHex: issuerExData.toHexString(),
-      TangemSdk.issuerPrivateKeyHex: _utils.issuerPrivateKeyHex,
       TangemSdk.issuerDataCounter: counter,
     });
   }
@@ -176,9 +174,8 @@ class _CommandListWidgetState extends State<CommandListWidget> {
     final userData = "User data to be written on a card";
     final counter = 1;
 
-    TangemSdk.writeUserData(_callback, {
+    TangemSdk.writeUserData(_callback, userData.toHexString(), {
       TangemSdk.cid: _cardId,
-      TangemSdk.userDataHex: userData.toHexString(),
       TangemSdk.userCounter: counter,
     });
   }
@@ -187,9 +184,8 @@ class _CommandListWidgetState extends State<CommandListWidget> {
     final userProtectedData = "Protected user data to be written on a card";
     final protectedCounter = 1;
 
-    TangemSdk.writeUserProtectedData(_callback, {
+    TangemSdk.writeUserProtectedData(_callback, userProtectedData.toHexString(), {
       TangemSdk.cid: _cardId,
-      TangemSdk.userProtectedDataHex: userProtectedData.toHexString(),
       TangemSdk.userProtectedCounter: protectedCounter,
     });
   }
