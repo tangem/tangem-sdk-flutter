@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:tangem_sdk/tangem_sdk_plugin.dart';
+import 'package:tangem_sdk/tangem_sdk.dart';
 import 'package:tangem_sdk_example/app_widgets.dart';
 import 'package:tangem_sdk_example/utils.dart';
 
@@ -118,9 +118,9 @@ class _CommandListWidgetState extends State<CommandListWidget> {
 
   handleSign() {
     final listOfData = List.generate(_utils.randomInt(1, 10), (index) => _utils.randomString(20));
-    final listOfHashes = listOfData.map((e) => e.toHexString()).toList();
+    final hashes = listOfData.map((e) => e.toHexString()).toList();
 
-    TangemSdk.sign(_callback, listOfHashes, {TangemSdk.cid: _cardId});
+    TangemSdk.sign(_callback, hashes, {TangemSdk.cid: _cardId});
   }
 
   handleReadIssuerData() {
@@ -135,11 +135,11 @@ class _CommandListWidgetState extends State<CommandListWidget> {
 
     final issuerData = "Issuer data to be written on a card";
     final issuerDataSignature = "(cardId.bytes + issuerData.bytes + counter.bytes(4)).sign(issuerPrivateKey)";
-    final counter = 1;
+    final issuerDataCounter = 1;
 
     TangemSdk.writeIssuerData(_callback, issuerData.toHexString(), issuerDataSignature.toHexString(), {
       TangemSdk.cid: _cardId,
-      TangemSdk.issuerDataCounter: counter,
+      TangemSdk.issuerDataCounter: issuerDataCounter,
     });
   }
 
@@ -153,14 +153,14 @@ class _CommandListWidgetState extends State<CommandListWidget> {
       return;
     }
 
-    final issuerExtraData = "Issuer extra data to be written on a card";
+    final issuerData = "Issuer extra data to be written on a card";
     final startingSignature =
         "(cardId.bytes + counter.bytes(4) + issuerData.bytes.size.bytes(2)).sign(issuerPrivateKey)";
     final finalizingSignature = "(cardId.bytes + issuerData.bytes + counter.bytes(4)).sign(issuerPrivateKey)";
     final counter = 1;
 
     TangemSdk.writeIssuerExtraData(
-        _callback, issuerExtraData.toHexString(), startingSignature.toHexString(), finalizingSignature.toHexString(), {
+        _callback, issuerData.toHexString(), startingSignature.toHexString(), finalizingSignature.toHexString(), {
       TangemSdk.cid: _cardId,
       TangemSdk.issuerDataCounter: counter,
     });
@@ -172,11 +172,11 @@ class _CommandListWidgetState extends State<CommandListWidget> {
 
   handleWriteUserData() {
     final userData = "User data to be written on a card";
-    final counter = 1;
+    final userCounter = 1;
 
     TangemSdk.writeUserData(_callback, userData.toHexString(), {
       TangemSdk.cid: _cardId,
-      TangemSdk.userCounter: counter,
+      TangemSdk.userCounter: userCounter,
     });
   }
 
