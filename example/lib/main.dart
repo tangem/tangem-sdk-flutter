@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:tangem_sdk/tangem_sdk_plugin.dart';
+import 'package:tangem_sdk/tangem_sdk.dart';
 import 'package:tangem_sdk_example/app_widgets.dart';
 import 'package:tangem_sdk_example/utils.dart';
 
