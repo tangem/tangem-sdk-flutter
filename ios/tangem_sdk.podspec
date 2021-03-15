@@ -4,22 +4,21 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'tangem_sdk'
-  s.version          = '0.0.1'
-  s.summary          = 'A new flutter plugin project.'
+  s.version          = '0.0.3'
+  s.summary          = 'TangemSdk flutter plugin.'
   s.description      = <<-DESC
-A new flutter plugin project.
+TangemSdk plugin for integration into flutter projects
                        DESC
-  s.homepage         = 'http://example.com'
+  s.homepage         = 'https://tangem.com'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'Your Company' => 'email@example.com' }
+  s.author           = { 'Tangem AG' => 'hello@tangem.com' }
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'
   s.dependency 'Flutter'
-  s.platform = :ios, '11.0'
-  s.ios.deployment_target = '11.0'
+  s.ios.deployment_target = '13.0'
 
   # Flutter.framework does not contain a i386 slice. Only x86_64 simulators are supported.
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'VALID_ARCHS[sdk=iphonesimulator*]' => 'x86_64' }
   s.swift_version = '5.0'
-  s.dependency 'TangemSdk', "~> 2.2.0"
+  s.dependency 'TangemSdk', "~> 2.4.2"
 end

@@ -43,6 +43,7 @@ class CardConfigSdk {
   final bool requireTerminalCertSignature;
   final bool checkPIN3OnCard;
   final bool createWallet;
+  final int walletsCount;
   final CardDataSdk cardData;
   final List<NdefRecordSdk> ndefRecords;
 
@@ -86,6 +87,7 @@ class CardConfigSdk {
     this.requireTerminalCertSignature,
     this.checkPIN3OnCard,
     this.createWallet,
+    this.walletsCount,
     this.cardData,
     this.ndefRecords,
   });
@@ -93,6 +95,57 @@ class CardConfigSdk {
   factory CardConfigSdk.fromJson(Map<String, dynamic> json) => _$CardConfigSdkFromJson(json);
 
   Map<String, dynamic> toJson() => _$CardConfigSdkToJson(this);
+}
+
+@JsonSerializable()
+class Issuer {
+  final String name;
+  final String id;
+  final KeyPairHex dataKeyPair;
+  final KeyPairHex transactionKeyPair;
+
+  Issuer(this.name, this.id, this.dataKeyPair, this.transactionKeyPair);
+
+  factory Issuer.fromJson(Map<String, dynamic> json) => _$IssuerFromJson(json);
+
+  Map<String, dynamic> toJson() => _$IssuerToJson(this);
+}
+
+@JsonSerializable()
+class Acquirer {
+  final String name;
+  final String id;
+  final KeyPairHex keyPair;
+
+  Acquirer(this.name, this.id, this.keyPair);
+
+  factory Acquirer.fromJson(Map<String, dynamic> json) => _$AcquirerFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AcquirerToJson(this);
+}
+
+@JsonSerializable()
+class Manufacturer {
+  final String name;
+  final KeyPairHex keyPair;
+
+  Manufacturer(this.name, this.keyPair);
+
+  factory Manufacturer.fromJson(Map<String, dynamic> json) => _$ManufacturerFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ManufacturerToJson(this);
+}
+
+@JsonSerializable()
+class KeyPairHex {
+  final String publicKey;
+  final String privateKey;
+
+  KeyPairHex(this.publicKey, this.privateKey);
+
+  factory KeyPairHex.fromJson(Map<String, dynamic> json) => _$KeyPairHexFromJson(json);
+
+  Map<String, dynamic> toJson() => _$KeyPairHexToJson(this);
 }
 
 @JsonSerializable()
@@ -139,7 +192,6 @@ class SigningMethodMaskSdk {
   Map<String, dynamic> toJson() => _$SigningMethodMaskSdkToJson(this);
 }
 
-
 @JsonSerializable()
 class ProductMaskSdk {
   final int rawValue;
@@ -164,3 +216,46 @@ class NdefRecordSdk {
 }
 
 enum PinType { PIN1, PIN2, PIN3 }
+
+abstract class FileDataHex {
+  final String data;
+
+  FileDataHex(this.data);
+}
+
+@JsonSerializable()
+class DataProtectedByPasscodeHex extends FileDataHex {
+  DataProtectedByPasscodeHex(String data) : super(data);
+
+  factory DataProtectedByPasscodeHex.fromJson(Map<String, dynamic> json) => _$DataProtectedByPasscodeHexFromJson(json);
+
+  Map<String, dynamic> toJson() => _$DataProtectedByPasscodeHexToJson(this);
+}
+
+@JsonSerializable()
+class DataProtectedBySignatureHex extends FileDataHex {
+  final int counter;
+  @JsonKey(nullable: false)
+  final FileDataSignatureHex signature;
+  @JsonKey(nullable: true)
+  final String issuerPublicKey;
+
+  DataProtectedBySignatureHex(String data, this.counter, this.signature, [this.issuerPublicKey]) : super(data);
+
+  factory DataProtectedBySignatureHex.fromJson(Map<String, dynamic> json) =>
+      _$DataProtectedBySignatureHexFromJson(json);
+
+  Map<String, dynamic> toJson() => _$DataProtectedBySignatureHexToJson(this);
+}
+
+@JsonSerializable()
+class FileDataSignatureHex {
+  final String startingSignature;
+  final String finalizingSignature;
+
+  FileDataSignatureHex(this.startingSignature, this.finalizingSignature);
+
+  factory FileDataSignatureHex.fromJson(Map<String, dynamic> json) => _$FileDataSignatureHexFromJson(json);
+
+  Map<String, dynamic> toJson() => _$FileDataSignatureHexToJson(this);
+}

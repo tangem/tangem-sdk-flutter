@@ -10,13 +10,16 @@ import com.google.gson.reflect.TypeToken
 import com.squareup.sqldelight.android.AndroidSqliteDriver
 import com.tangem.*
 import com.tangem.commands.common.ResponseConverter
+import com.tangem.commands.common.card.FirmwareType
+import com.tangem.commands.file.FileData
+import com.tangem.commands.file.FileDataSignature
+import com.tangem.commands.file.FileSettingsChange
 import com.tangem.commands.personalization.entities.Acquirer
 import com.tangem.commands.personalization.entities.CardConfig
 import com.tangem.commands.personalization.entities.Issuer
 import com.tangem.commands.personalization.entities.Manufacturer
 import com.tangem.common.CardValuesDbStorage
 import com.tangem.common.CompletionResult
-import com.tangem.common.extensions.CardType
 import com.tangem.common.extensions.calculateSha256
 import com.tangem.common.extensions.hexToBytes
 import com.tangem.tangem_sdk_new.DefaultSessionViewDelegate
@@ -52,8 +55,8 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       setCurrentActivity(activity)
       hiddenLifecycleReference.lifecycle.addObserver(NfcLifecycleObserver(this))
     }
-    val cardManagerDelegate = DefaultSessionViewDelegate(nfcManager.reader).apply { this.activity = activity }
-    val config = Config(cardFilter = CardFilter(EnumSet.of(CardType.Sdk)))
+    val cardManagerDelegate = DefaultSessionViewDelegate(nfcManager, nfcManager.reader).apply { this.activity = activity }
+    val config = Config(cardFilter = CardFilter(EnumSet.of(FirmwareType.Sdk)))
     val valueStorage = CardValuesDbStorage(AndroidSqliteDriver(Database.Schema, activity.applicationContext,
         "flutter_cards.db"))
     val keyStorage = TerminalKeysStorage(activity.application)
@@ -83,6 +86,8 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       "allowsOnlyDebugCards" -> allowsOnlyDebugCards(call, result)
       "scanCard" -> scanCard(call, result)
       "sign" -> sign(call, result)
+      "personalize" -> personalize(call, result)
+      "depersonalize" -> depersonalize(call, result)
       "readIssuerData" -> readIssuerData(call, result)
       "writeIssuerData" -> writeIssuerData(call, result)
       "readIssuerExData" -> readIssuerExtraData(call, result)
@@ -94,8 +99,11 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       "purgeWallet" -> purgeWallet(call, result)
       "setPin1" -> setPin1(call, result)
       "setPin2" -> setPin2(call, result)
-      //      "personalize" -> personalize(call, result)
-      //      "depersonalize" -> depersonalize(call, result)
+      "writeFiles" -> writeFiles(call, result)
+      "readFiles" -> readFiles(call, result)
+      "deleteFiles" -> deleteFiles(call, result)
+      "changeFilesSettings" -> changeFilesSettings(call, result)
+      "prepareHashes" -> prepareHashes(call, result)
       "getPlatformVersion" -> result.success("Android ${android.os.Build.VERSION.RELEASE}")
       else -> result.notImplemented()
     }
@@ -111,7 +119,7 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 
   private fun sign(call: MethodCall, result: Result) {
     try {
-      sdk.sign(hashes(call), cid(call), message(call)) { handleResult(result, it) }
+      sdk.sign(hashes(call), null, cid(call), message(call)) { handleResult(result, it) }
     } catch (ex: Exception) {
       handleException(result, ex)
     }
@@ -140,7 +148,7 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 
   private fun createWallet(call: MethodCall, result: Result) {
     try {
-      sdk.createWallet(cid(call), message(call)) { handleResult(result, it) }
+      sdk.createWallet(null, null, cid(call), message(call)) { handleResult(result, it) }
     } catch (ex: Exception) {
       handleException(result, ex)
     }
@@ -148,7 +156,7 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 
   private fun purgeWallet(call: MethodCall, result: Result) {
     try {
-      sdk.purgeWallet(cid(call), message(call)) { handleResult(result, it) }
+      sdk.purgeWallet(null, cid(call), message(call)) { handleResult(result, it) }
     } catch (ex: Exception) {
       handleException(result, ex)
     }
@@ -254,12 +262,62 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     }
   }
 
+  private fun writeFiles(call: MethodCall, result: Result) {
+    try {
+      val filesList = extractFilesToWrite(call, result)
+      sdk.writeFiles(filesList, cid(call), message(call)) { handleResult(result, it) }
+    } catch (ex: Exception) {
+      handleException(result, ex)
+    }
+  }
+
+  private fun readFiles(call: MethodCall, result: Result) {
+    try {
+      val readPrivateFiles = call.argument<Boolean>("readPrivateFiles") ?: false
+      val indices = call.argument<List<Int>>("indices")?.toList()
+      sdk.readFiles(readPrivateFiles, indices, cid(call), message(call)) { handleResult(result, it) }
+    } catch (ex: Exception) {
+      handleException(result, ex)
+    }
+  }
+
+  private fun deleteFiles(call: MethodCall, result: Result) {
+    try {
+      val indices = call.argument<List<Int>>("indices")?.toList()
+      sdk.deleteFiles(indices, cid(call), message(call)) { handleResult(result, it) }
+    } catch (ex: Exception) {
+      handleException(result, ex)
+    }
+  }
+
+  private fun changeFilesSettings(call: MethodCall, result: Result) {
+    try {
+      val listOfSettings = extractChangesOfFileSettings(call, result)
+      sdk.changeFilesSettings(listOfSettings, cid(call), message(call)) { handleResult(result, it) }
+    } catch (ex: Exception) {
+      handleException(result, ex)
+    }
+  }
+
+  private fun prepareHashes(call: MethodCall, result: Result) {
+    try {
+      val cid = cid(call) !!
+      val data = hexDataToBytes(call, "fileData")
+      val counter = call.argument<Int>("fileCounter") !!
+      val privateKey = hexDataToBytes(call, "privateKey")
+      val fileHasData = sdk.prepareHashes(cid, data, counter, privateKey)
+      handleResult(result, CompletionResult.Success(fileHasData))
+    } catch (ex: Exception) {
+      handleException(result, ex)
+    }
+  }
+
   private fun allowsOnlyDebugCards(call: MethodCall, result: Result) {
     try {
       val name = "isAllowedOnlyDebugCards"
       assert(call, name)
       val allowedOnlyDebug = call.argument<Boolean>(name) !!
-      val allowedCardTypes = if (allowedOnlyDebug) EnumSet.of(CardType.Sdk) else EnumSet.allOf(CardType::class.java)
+      val allowedCardTypes = if (allowedOnlyDebug) EnumSet.of(FirmwareType.Sdk) else EnumSet.allOf(FirmwareType::class.java)
       sdk.config.cardFilter.allowedCardTypes = allowedCardTypes
     } catch (ex: Exception) {
       handleException(result, ex)
@@ -277,7 +335,8 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       is CompletionResult.Failure -> {
         val error = completionResult.error
         val errorMessage = if (error is TangemSdkError) {
-          wActivity.get()?.getString(error.localizedDescription()) ?: error.customMessage
+          val activity = wActivity.get()
+          if (activity == null) error.customMessage else error.localizedDescription(activity)
         } else {
           error.customMessage
         }
@@ -400,6 +459,31 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       return gson.fromJson(jsonString, type)
     }
 
+    private fun extractFilesToWrite(call: MethodCall, result: Result): List<FileData> {
+      val gson = Gson()
+      val mapType = object: TypeToken<MutableList<MutableMap<String, Any>>>() {}.type
+      val json = call.argument<String>("files")
+      val rawList = gson.fromJson<MutableList<MutableMap<String, Any>>>(json, mapType)
+      if (rawList.isEmpty()) return mutableListOf()
+
+      val jsonList = rawList.map { gson.toJson(it) }
+      return if (rawList[0].containsKey("signature")) {
+        jsonList.map { gson.fromJson(it, FileDataHex.DataProtectedBySignatureHex::class.java) }.map { it.convert() }
+      } else {
+        jsonList.map { gson.fromJson(it, FileDataHex.DataProtectedByPasscodeHex::class.java) }.map { it.convert() }
+      }
+    }
+
+    private fun extractChangesOfFileSettings(call: MethodCall, result: Result): List<FileSettingsChange> {
+      val gson = Gson()
+      val mapType = object: TypeToken<MutableList<MutableMap<String, Any>>>() {}.type
+      val json = call.argument<String>("changes")
+      val rawList = gson.fromJson<MutableList<MutableMap<String, Any>>>(json, mapType)
+      if (rawList.isEmpty()) return mutableListOf()
+
+      return rawList.map { gson.toJson(it) }.map { gson.fromJson(it, FileSettingsChange::class.java) }
+    }
+
     @Throws(Exception::class)
     private fun assert(call: MethodCall, name: String) {
       if (! call.hasArgument(name)) throw NoSuchFieldException(name)
@@ -407,7 +491,33 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
   }
 }
 
+typealias HexString = String
+
 data class PluginError(val code: Int, val localizedDescription: String)
-data class KeyPairHex(val publicKey: String, val privateKey: String) {
+data class KeyPairHex(val publicKey: HexString, val privateKey: HexString) {
   fun convert(): KeyPair = KeyPair(publicKey.hexToBytes(), privateKey.hexToBytes())
+}
+
+sealed class FileDataHex(val data: HexString) {
+  class DataProtectedBySignatureHex(
+      data: HexString,
+      val counter: Int,
+      val signature: FileDataSignatureHex,
+      val issuerPublicKey: HexString? = null
+  ): FileDataHex(data) {
+    fun convert(): FileData.DataProtectedBySignature {
+      return FileData.DataProtectedBySignature(data.hexToBytes(), counter, signature.convert(), issuerPublicKey?.hexToBytes())
+    }
+  }
+
+  class DataProtectedByPasscodeHex(data: HexString): FileDataHex(data) {
+    fun convert(): FileData.DataProtectedByPasscode = FileData.DataProtectedByPasscode(data.hexToBytes())
+  }
+}
+
+class FileDataSignatureHex(
+    val startingSignature: HexString,
+    val finalizingSignature: HexString,
+) {
+  fun convert(): FileDataSignature = FileDataSignature(startingSignature.hexToBytes(), finalizingSignature.hexToBytes())
 }

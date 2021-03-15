@@ -10,6 +10,6 @@
 
 @implementation TangemSdkPlugin
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
-  [SwiftTangemSdkPlugin registerWithRegistrar:registrar];
+    [SwiftTangemSdkPlugin registerWithRegistrar:registrar];
 }
 @end

@@ -3,8 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:tangem_sdk/tangem_sdk.dart';
-import 'package:tangem_sdk_example/app_widgets.dart';
-import 'package:tangem_sdk_example/utils.dart';
+
+import 'app_widgets.dart';
+import 'utils.dart';
 
 void main() {
   runApp(MyApp());
@@ -45,8 +46,8 @@ class _CommandListWidgetState extends State<CommandListWidget> {
       final prettyJson = _jsonEncoder.convert(success.toJson());
       prettyJson.split("\n").forEach((element) => print(element));
     }, (error) {
-      if (error is ErrorResponse) {
-        print(error.localizedDescription);
+      if (error is SdkPluginError) {
+        print(error.message);
       } else {
         print(error);
       }
@@ -199,11 +200,11 @@ class _CommandListWidgetState extends State<CommandListWidget> {
   }
 
   handleSetPin1() {
-    TangemSdk.setPinCode(PinType.PIN1, _callback, {TangemSdk.cid: _cardId});
+    TangemSdk.setPinCode(_callback, PinType.PIN1, {TangemSdk.cid: _cardId});
   }
 
   handleSetPin2() {
-    TangemSdk.setPinCode(PinType.PIN2, _callback, {TangemSdk.cid: _cardId});
+    TangemSdk.setPinCode(_callback, PinType.PIN2, {TangemSdk.cid: _cardId});
   }
 
   _showToast(String message) {

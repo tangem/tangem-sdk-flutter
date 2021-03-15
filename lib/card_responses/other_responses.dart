@@ -1,28 +1,6 @@
-import 'dart:convert';
-
-import 'package:flutter/services.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'other_responses.g.dart';
-
-@JsonSerializable(nullable: false)
-class ErrorResponse {
-  int code;
-  String localizedDescription;
-
-  ErrorResponse({this.code, this.localizedDescription});
-
-  factory ErrorResponse.fromJson(Map<String, dynamic> json) => _$ErrorResponseFromJson(json);
-
-  Map<String, dynamic> toJson() => _$ErrorResponseToJson(this);
-
-  ErrorResponse.fromException(PlatformException ex) {
-    final jsonString = ex.details;
-    final map = json.decode(jsonString);
-    this.code = map['code'];
-    this.localizedDescription = map['localizedDescription'];
-  }
-}
 
 @JsonSerializable(nullable: false)
 class SignResponse {
@@ -161,4 +139,99 @@ class SetPinResponse {
   factory SetPinResponse.fromJson(Map<String, dynamic> json) => _$SetPinResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$SetPinResponseToJson(this);
+}
+
+@JsonSerializable()
+class FileHashDataHex {
+  final String startingHash;
+  final String finalizingHash;
+  final String startingSignature;
+  final String finalizingSignature;
+
+  FileHashDataHex(this.startingHash, this.finalizingHash, [this.startingSignature, this.finalizingSignature]);
+
+  factory FileHashDataHex.fromJson(Map<String, dynamic> json) => _$FileHashDataHexFromJson(json);
+
+  Map<String, dynamic> toJson() => _$FileHashDataHexToJson(this);
+}
+
+@JsonSerializable()
+class WriteFilesResponse {
+  final String cardId;
+  final int fileIndex;
+
+  WriteFilesResponse(this.cardId, [this.fileIndex]);
+
+  factory WriteFilesResponse.fromJson(Map<String, dynamic> json) => _$WriteFilesResponseFromJson(json);
+
+  Map<String, dynamic> toJson() => _$WriteFilesResponseToJson(this);
+}
+
+@JsonSerializable()
+class ReadFilesResponse {
+  final List<FileHex> files;
+
+  ReadFilesResponse(this.files);
+
+  factory ReadFilesResponse.fromJson(Map<String, dynamic> json) => _$ReadFilesResponseFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ReadFilesResponseToJson(this);
+}
+
+@JsonSerializable()
+class FileHex {
+  final int fileIndex;
+  final String fileData;
+  final FileSettings fileSettings;
+
+  FileHex(this.fileIndex, this.fileData, [this.fileSettings]);
+
+  factory FileHex.fromJson(Map<String, dynamic> json) => _$FileHexFromJson(json);
+
+  Map<String, dynamic> toJson() => _$FileHexToJson(this);
+}
+
+@JsonSerializable()
+class ChangeFileSettings {
+  final int fileIndex;
+  final FileSettings settings;
+
+  ChangeFileSettings(this.fileIndex, this.settings);
+
+  factory ChangeFileSettings.fromJson(Map<String, dynamic> json) => _$ChangeFileSettingsFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ChangeFileSettingsToJson(this);
+}
+
+enum FileSettings { Public, Private }
+
+extension FileSettingsCode on FileSettings {
+  static const codes = {
+    FileSettings.Public: 0x0001,
+    FileSettings.Private: 0x0000,
+  };
+
+  int get code => codes[this];
+}
+
+@JsonSerializable()
+class DeleteFilesResponse {
+  final String cardId;
+
+  DeleteFilesResponse(this.cardId);
+
+  factory DeleteFilesResponse.fromJson(Map<String, dynamic> json) => _$DeleteFilesResponseFromJson(json);
+
+  Map<String, dynamic> toJson() => _$DeleteFilesResponseToJson(this);
+}
+
+@JsonSerializable()
+class ChangeFilesSettingsResponse {
+  final String cardId;
+
+  ChangeFilesSettingsResponse(this.cardId);
+
+  factory ChangeFilesSettingsResponse.fromJson(Map<String, dynamic> json) => _$ChangeFilesSettingsResponseFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ChangeFilesSettingsResponseToJson(this);
 }

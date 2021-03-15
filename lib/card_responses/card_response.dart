@@ -8,7 +8,7 @@ class CardResponse {
   String cardId;
   String cardPublicKey;
   String curve;
-  String firmwareVersion;
+  FirmwareVersion firmwareVersion;
   int health;
   bool isActivated;
   String issuerPublicKey;
@@ -46,6 +46,21 @@ class CardResponse {
   factory CardResponse.fromJson(Map<String, dynamic> json) => _$CardResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$CardResponseToJson(this);
+}
+
+@JsonSerializable()
+class FirmwareVersion {
+  final int hotFix;
+  final int major;
+  final int minor;
+  final String type;
+  final String version;
+
+  FirmwareVersion(this.hotFix, this.major, this.minor, this.type, this.version);
+
+  factory FirmwareVersion.fromJson(Map<String, dynamic> json) => _$FirmwareVersionFromJson(json);
+
+  Map<String, dynamic> toJson() => _$FirmwareVersionToJson(this);
 }
 
 @JsonSerializable()

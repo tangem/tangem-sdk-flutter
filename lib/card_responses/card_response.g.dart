@@ -8,23 +8,21 @@ part of 'card_response.dart';
 
 CardResponse _$CardResponseFromJson(Map<String, dynamic> json) {
   return CardResponse(
-    cardData: json['cardData'] == null
-        ? null
-        : CardDataResponse.fromJson(json['cardData'] as Map<String, dynamic>),
+    cardData: json['cardData'] == null ? null : CardDataResponse.fromJson(json['cardData'] as Map<String, dynamic>),
     cardId: json['cardId'] as String,
     cardPublicKey: json['cardPublicKey'] as String,
     curve: json['curve'] as String,
-    firmwareVersion: json['firmwareVersion'] as String,
+    firmwareVersion: json['firmwareVersion'] == null
+        ? null
+        : FirmwareVersion.fromJson(json['firmwareVersion'] as Map<String, dynamic>),
     health: json['health'] as int,
     isActivated: json['isActivated'] as bool,
     issuerPublicKey: json['issuerPublicKey'] as String,
     manufacturerName: json['manufacturerName'] as String,
     maxSignatures: json['maxSignatures'] as int,
     pauseBeforePin2: json['pauseBeforePin2'] as int,
-    settingsMask:
-        (json['settingsMask'] as List)?.map((e) => e as String)?.toList(),
-    signingMethods:
-        (json['signingMethods'] as List)?.map((e) => e as String)?.toList(),
+    settingsMask: (json['settingsMask'] as List)?.map((e) => e as String)?.toList(),
+    signingMethods: (json['signingMethods'] as List)?.map((e) => e as String)?.toList(),
     status: json['status'] as String,
     terminalIsLinked: json['terminalIsLinked'] as bool,
     walletPublicKey: json['walletPublicKey'] as String,
@@ -33,8 +31,7 @@ CardResponse _$CardResponseFromJson(Map<String, dynamic> json) {
   );
 }
 
-Map<String, dynamic> _$CardResponseToJson(CardResponse instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$CardResponseToJson(CardResponse instance) => <String, dynamic>{
       'cardData': instance.cardData,
       'cardId': instance.cardId,
       'cardPublicKey': instance.cardPublicKey,
@@ -55,6 +52,18 @@ Map<String, dynamic> _$CardResponseToJson(CardResponse instance) =>
       'walletSignedHashes': instance.walletSignedHashes,
     };
 
+FirmwareVersion _$FirmwareVersionFromJson(Map<String, dynamic> json) {
+  return FirmwareVersion(json["hotFix"], json["major"], json["minor"], json["type"], json["version"]);
+}
+
+Map<String, dynamic> _$FirmwareVersionToJson(FirmwareVersion instance) => <String, dynamic>{
+      'hotFix': instance.hotFix,
+      'major': instance.major,
+      'minor': instance.minor,
+      'type': instance.type,
+      'version': instance.version,
+    };
+
 CardDataResponse _$CardDataResponseFromJson(Map<String, dynamic> json) {
   return CardDataResponse(
     batchId: json['batchId'] as String,
@@ -62,8 +71,7 @@ CardDataResponse _$CardDataResponseFromJson(Map<String, dynamic> json) {
     issuerName: json['issuerName'] as String,
     manufacturerSignature: json['manufacturerSignature'] as String,
     manufactureDateTime: json['manufactureDateTime'] as String,
-    productMask:
-        (json['productMask'] as List)?.map((e) => e as String)?.toList(),
+    productMask: (json['productMask'] as List)?.map((e) => e as String)?.toList(),
     tokenContractAddress: json['tokenContractAddress'] as String,
     tokenSymbol: json['tokenSymbol'] as String,
     tokenDecimal: json['tokenDecimal'] as int,
