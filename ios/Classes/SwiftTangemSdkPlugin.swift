@@ -59,6 +59,8 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
                 try readFiles(call.arguments, result)
             case "deleteFiles":
                 try deleteFiles(call.arguments, result)
+            case "normalizeVerify":
+                try normalizeVerify(call.arguments, result)
 //            case "changeFilesSettings":
 //                try changeFilesSettings(call.arguments, result)
             default:
@@ -69,6 +71,19 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
             print(error.localizedDescription)
             handleError(error, result)
         }
+    }
+    
+    private func normalizeVerify(_ args: Any?, _ completion: @escaping FlutterResult) throws {
+        let key: Data = try getArg(.publicKey, from: args)
+        let hash: Data = try getArg(.hash, from: args)
+        let signature: Data = try getArg(.signature, from: args)
+        
+        if let normalized = Secp256k1Utils.normalizeVerify(secp256k1Signature: signature, hash: hash, publicKey: key) {
+            completion("\"\(normalized.asHexString())\"")
+            return
+        }
+        
+        handleError(TangemSdkError.cryptoUtilsError, completion)
     }
     
     private func scanCard(_ args: Any?, _ completion: @escaping FlutterResult) throws {
@@ -83,7 +98,6 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
     private func sign(_ args: Any?, _ completion: @escaping FlutterResult) throws {
          let hexHashes: [String] = try getArg(.hashes, from: args)
          let hashes = hexHashes.compactMap({Data(hexString: $0)})
-        
         sdk.sign(hashes: hashes,
                  cardId: try getArgOptional(.cid, from: args),
                  initialMessage: try getArgOptional(.initialMessage, from: args),
@@ -409,4 +423,7 @@ fileprivate enum ArgKey: String {
     case privateKey
     case readPrivateFiles
     case indices
+    case signature
+    case hash
+    case publicKey
 }
