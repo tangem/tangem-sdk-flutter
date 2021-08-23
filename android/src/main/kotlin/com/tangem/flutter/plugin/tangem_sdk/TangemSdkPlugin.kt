@@ -32,7 +32,9 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+import org.spongycastle.jce.ECNamedCurveTable
 import java.lang.ref.WeakReference
+import java.math.BigInteger
 import java.util.*
 
 /** TangemSdkPlugin */
@@ -94,6 +96,7 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       "purgeWallet" -> purgeWallet(call, result)
       "setPin1" -> setPin1(call, result)
       "setPin2" -> setPin2(call, result)
+      "normalizeVerify" -> normalizeVerify(call, result)
       //      "personalize" -> personalize(call, result)
       //      "depersonalize" -> depersonalize(call, result)
       "getPlatformVersion" -> result.success("Android ${android.os.Build.VERSION.RELEASE}")
@@ -238,6 +241,17 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
   private fun setPin2(call: MethodCall, result: Result) {
     try {
       sdk.changePin2(cid(call), pinCode(call), message(call)) { handleResult(result, it) }
+    } catch (ex: Exception) {
+      handleException(result, ex)
+    }
+  }
+
+  private fun normalizeVerify(call: MethodCall, result: Result) {
+    try {
+//      val key: ByteArray = call.argument<String>("publicKey")
+//      val hash: ByteArray = call.argument<String>("hash")
+      val signature: ByteArray = call.argument<String>("signature") !!.hexToBytes()
+      handleResult(result, CompletionResult.Success(signature.toCanonicalECDSASignature()))
     } catch (ex: Exception) {
       handleException(result, ex)
     }
@@ -410,4 +424,21 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 data class PluginError(val code: Int, val localizedDescription: String)
 data class KeyPairHex(val publicKey: String, val privateKey: String) {
   fun convert(): KeyPair = KeyPair(publicKey.hexToBytes(), privateKey.hexToBytes())
+}
+
+fun ByteArray.toCanonicalECDSASignature(): ByteArray {
+  fun isCanonical(s: BigInteger, halfCurveOrder: BigInteger): Boolean = s <= halfCurveOrder
+  if (this.size != 64) throw Exception("Invalid signature length")
+
+  val s = BigInteger(1, this.copyOfRange(32, 64))
+  val ecSpec = ECNamedCurveTable.getParameterSpec("secp256k1")
+  val halfCurveOrder: BigInteger = ecSpec.n shr 1
+
+  if (! isCanonical(s, halfCurveOrder)) {
+    val canonizedS = ecSpec.n.subtract(s)
+    val baS = canonizedS.toByteArray()
+    System.arraycopy(baS, 0, this, 32, baS.size)
+  }
+
+  return this
 }

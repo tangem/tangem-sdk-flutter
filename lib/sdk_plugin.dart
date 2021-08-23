@@ -26,6 +26,7 @@ class TangemSdk {
   static const cWriteUserProtectedData = 'writeUserProtectedData';
   static const cSetPin1 = 'setPin1';
   static const cSetPin2 = 'setPin2';
+  static const cNormalizeVerify = 'normalizeVerify';
 
   static const isAllowedOnlyDebugCards = "isAllowedOnlyDebugCards";
   static const cid = "cid";
@@ -167,6 +168,17 @@ class TangemSdk {
     _channel
         .invokeMethod(cPinMethod, valuesToExport)
         .then((result) => callback.onSuccess(_createResponse(cPinMethod, result)))
+        .catchError((error) => _sendBackError(callback, error));
+  }
+
+  static Future normalizeVerify(String publicKeyHex, String hashHex, signatureHex, Callback callback) async {
+    Map<String, dynamic> valuesToExport = {};
+    valuesToExport["publicKey"] = publicKeyHex;
+    valuesToExport["hash"] = hashHex;
+    valuesToExport["signature"] = signatureHex;
+    _channel
+        .invokeMethod(cNormalizeVerify, valuesToExport)
+        .then((result) => callback.onSuccess(_createResponse(cNormalizeVerify, result)))
         .catchError((error) => _sendBackError(callback, error));
   }
 

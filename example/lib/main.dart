@@ -42,8 +42,13 @@ class _CommandListWidgetState extends State<CommandListWidget> {
       if (success is CardResponse) {
         _cardId = success.cardId;
       }
-      final prettyJson = _jsonEncoder.convert(success.toJson());
-      prettyJson.split("\n").forEach((element) => print(element));
+      try {
+        final prettyJson = _jsonEncoder.convert(success.toJson());
+        prettyJson.split("\n").forEach((element) => print(element));
+      } catch (e) {
+        print('The provided string is not valid JSON');
+        print(success.toString());
+      }
     }, (error) {
       if (error is ErrorResponse) {
         print(error.localizedDescription);
@@ -66,6 +71,7 @@ class _CommandListWidgetState extends State<CommandListWidget> {
             [
               ActionButton(text: "Scan card", action: handleScanCard),
               ActionButton(text: "Sign", action: handleSign),
+              ActionButton(text: "Canonize", action: handleCanonize),
             ],
           ),
           ActionType("Issuer data"),
@@ -121,6 +127,15 @@ class _CommandListWidgetState extends State<CommandListWidget> {
     final hashes = listOfData.map((e) => e.toHexString()).toList();
 
     TangemSdk.sign(_callback, hashes, {TangemSdk.cid: _cardId});
+  }
+
+  handleCanonize() {
+    final hashHex = "5133574D6642484D393164644F6545467A513965";
+    final publicKeyHex = "04C29EE14CAAAB4A64687C7E25EF39D8204990EB9F2C34FD6AAC9668951E9F74AF19EB00D5977B01CB4F57BF9F98D962DEFD7645B6BB391D500FDE676630A7FF09";
+    final signatureHex = "BE71CF2383364C29D6BAAA33CCE1D5D179E27B3BC93B85E4E9949BDBC15509B885C0D0D6A805D68E8AB6565A3FAEB709680B21BBD596527F517EA767CD6F2FD0";
+    final resultForCheck = "BE71CF2383364C29D6BAAA33CCE1D5D179E27B3BC93B85E4E9949BDBC15509B87A3F2F2957FA29717549A9A5C05148F552A3BB2AD9B24DBC6E53B72502C71171";
+
+    TangemSdk.normalizeVerify(publicKeyHex, hashHex, signatureHex, _callback);
   }
 
   handleReadIssuerData() {
