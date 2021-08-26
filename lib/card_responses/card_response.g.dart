@@ -14,7 +14,7 @@ CardResponse _$CardResponseFromJson(Map<String, dynamic> json) {
     cardId: json['cardId'] as String,
     cardPublicKey: json['cardPublicKey'] as String,
     curve: json['curve'] as String,
-    firmwareVersion: json['firmwareVersion'] as String,
+    firmwareVersion: mapFirmwareVersion(json['firmwareVersion']),
     health: json['health'] as int,
     isActivated: json['isActivated'] as bool,
     issuerPublicKey: json['issuerPublicKey'] as String,
@@ -31,6 +31,13 @@ CardResponse _$CardResponseFromJson(Map<String, dynamic> json) {
     walletRemainingSignatures: json['walletRemainingSignatures'] as int,
     walletSignedHashes: json['walletSignedHashes'] as int,
   );
+}
+
+String mapFirmwareVersion(dynamic version) {
+  if (version is String) return version;
+  if (version is Map) return version["version"] as String;
+
+  return null;
 }
 
 Map<String, dynamic> _$CardResponseToJson(CardResponse instance) =>
