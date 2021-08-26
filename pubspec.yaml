@@ -1,11 +1,11 @@
 name: tangem_sdk
 description: A new flutter plugin project.
-version: 0.1.1
+version: 0.1.2
 homepage: https://github.com/Tangem/tangem-sdk-flutter
 
 environment:
   sdk: ">=2.6.0 <3.0.0"
-  flutter: ^1.10.0
+  flutter: ">=1.10.0"
 
 dependencies:
   flutter:

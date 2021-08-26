@@ -1,3 +1,7 @@
+## 0.1.2
+
+* Fixed mapping of the firmwareVersion
+
 ## 0.1.1
 
 * Added canonization for the secp256k1 signature 
