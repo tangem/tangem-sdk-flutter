@@ -33,29 +33,55 @@ class _CommandListWidgetState extends State<CommandListWidget> {
 
   Callback _callback;
   String _cardId;
+  String _walletPublicKey;
 
   @override
   void initState() {
     super.initState();
 
-    _callback = Callback((success) {
-      if (success is CardResponse) {
-        _cardId = success.cardId;
-      }
-      try {
-        final prettyJson = _jsonEncoder.convert(success.toJson());
-        prettyJson.split("\n").forEach((element) => print(element));
-      } catch (e) {
-        print('The provided string is not valid JSON');
-        print(success.toString());
-      }
-    }, (error) {
-      if (error is ErrorResponse) {
-        print(error.localizedDescription);
+    _callback = Callback((response) {
+      if (response is! JSONRPCResponse) {
+        print("Response is not an instance of the JSONRPCResponse");
       } else {
-        print(error);
+        final jsonRpcResponse = response as JSONRPCResponse;
+        if (jsonRpcResponse.result != null) {
+          switch (jsonRpcResponse.id) {
+            case 1:
+              {
+                _cardId = jsonRpcResponse.result["cardId"];
+                final wallets = jsonRpcResponse.result["wallets"];
+                if (wallets is List && wallets.isNotEmpty) {
+                  _walletPublicKey = wallets[0]["publicKey"];
+                }
+                break;
+              }
+            case 3:
+              {
+                _walletPublicKey = jsonRpcResponse.result["wallet"]["publicKey"];
+                break;
+              }
+            case 4:
+              {
+                _walletPublicKey = null;
+                break;
+              }
+          }
+        }
       }
+      _printResponse(response);
+    }, (error) {
+      print(error);
     });
+  }
+
+  void _printResponse(response) {
+    try {
+      final prettyJson = _jsonEncoder.convert(response.toJson());
+      prettyJson.split("\n").forEach((element) => print(element));
+    } catch (e) {
+      print('The provided string is not valid JSON');
+      print(response.toString());
+    }
   }
 
   @override
@@ -70,34 +96,9 @@ class _CommandListWidgetState extends State<CommandListWidget> {
           RowActions(
             [
               ActionButton(text: "Scan card", action: handleScanCard),
-              ActionButton(text: "Sign", action: handleSign),
-              ActionButton(text: "Canonize", action: handleCanonize),
+              ActionButton(text: "Sign hash", action: handleSign),
             ],
           ),
-          ActionType("Issuer data"),
-          RowActions(
-            [
-              ActionButton(text: "Read", action: handleReadIssuerData),
-              ActionButton(text: "Write", action: handleWriteIssuerData),
-            ],
-          ),
-          ActionType("Issuer extra data"),
-          RowActions(
-            [
-              ActionButton(text: "Read", action: handleReadIssuerExtraData),
-              ActionButton(text: "Write", action: handleWriteIssuerExtraData),
-            ],
-          ),
-          ActionType("User data"),
-          RowActions(
-            [
-              ActionButton(text: "Read (all)", action: handleReadUserData),
-              ActionButton(text: "Write data", action: handleWriteUserData),
-            ],
-          ),
-          RowActions([
-            ActionButton(text: "Write protected data", action: handleWriteUserProtectedData),
-          ]),
           ActionType("Wallet"),
           RowActions(
             [
@@ -108,8 +109,8 @@ class _CommandListWidgetState extends State<CommandListWidget> {
           ActionType("Pins"),
           RowActions(
             [
-              ActionButton(text: "Change PIN1", action: handleSetPin1),
-              ActionButton(text: "Change PIN2", action: handleSetPin2),
+              ActionButton(text: "Set access code", action: handleSetAccessCode),
+              ActionButton(text: "Set passcode", action: handleSetPasscode),
             ],
           ),
           SizedBox(height: 25)
@@ -118,107 +119,92 @@ class _CommandListWidgetState extends State<CommandListWidget> {
     );
   }
 
+  void _launchJSONRPCRequest(Map<String, dynamic> json, [String cardId, Message message]) {
+    TangemSdk.runJSONRPCRequest(_callback, JSONRPCRequest.fromJson(json), cardId, message);
+  }
+
   handleScanCard() {
-    TangemSdk.scanCard(_callback);
+    final json = {
+      "id": 1,
+      "method": "scan",
+      "params": <String, dynamic>{},
+    };
+    _launchJSONRPCRequest(json, null, Message.body("Some body"));
   }
 
   handleSign() {
-    final listOfData = List.generate(_utils.randomInt(1, 10), (index) => _utils.randomString(20));
-    final hashes = listOfData.map((e) => e.toHexString()).toList();
-
-    TangemSdk.sign(_callback, hashes, {TangemSdk.cid: _cardId});
-  }
-
-  handleCanonize() {
-    final publicKeyHex = "04AD465EA5BB14AD33E493B0F9459AA20C0EFA35A255B5D3E1B134DC8594DAA86A5E1B169B9570A91B4AB9427A739D87BE32D1046954DC8BC39AC3EAFE3AF41F1C";
-    final hashHex = "9D8BEF45207B396386C439493488FB30409D5E3A538F5CBC5B062DA0AA138CA9";
-    final signatureHex = "C40CA98DB192972849C2CCD37EC8221221868BCAA30567D27DA6DCAAA34A3A33931BFC191C289330BE4D06B597478DB37EC196C010542B92A4BE6BB9E2609532";
-    final resultForCheck = "C40CA98DB192972849C2CCD37EC8221221868BCAA30567D27DA6DCAAA34A3A336CE403E6E3D76CCF41B2F94A68B8724B3BED46269EF474A91B13F2D2EDD5AC0F";
-
-    TangemSdk.normalizeVerify(publicKeyHex, hashHex, signatureHex, _callback);
-  }
-
-  handleReadIssuerData() {
-    TangemSdk.readIssuerData(_callback, {TangemSdk.cid: _cardId});
-  }
-
-  handleWriteIssuerData() {
-    if (_cardId == null) {
-      _showToast("CardId required. Scan your card before proceeding");
+    if (_cardId == null || _walletPublicKey == null) {
+      _showToast("Scan the card or create a wallet");
       return;
     }
 
-    final issuerData = "Issuer data to be written on a card";
-    final issuerDataSignature = "(cardId.bytes + issuerData.bytes + counter.bytes(4)).sign(issuerPrivateKey)";
-    final issuerDataCounter = 1;
-
-    TangemSdk.writeIssuerData(_callback, issuerData.toHexString(), issuerDataSignature.toHexString(), {
-      TangemSdk.cid: _cardId,
-      TangemSdk.issuerDataCounter: issuerDataCounter,
-    });
-  }
-
-  handleReadIssuerExtraData() {
-    TangemSdk.readIssuerExtraData(_callback, {TangemSdk.cid: _cardId});
-  }
-
-  handleWriteIssuerExtraData() {
-    if (_cardId == null) {
-      _showToast("CardId required. Scan your card before proceeding");
-      return;
-    }
-
-    final issuerData = "Issuer extra data to be written on a card";
-    final startingSignature =
-        "(cardId.bytes + counter.bytes(4) + issuerData.bytes.size.bytes(2)).sign(issuerPrivateKey)";
-    final finalizingSignature = "(cardId.bytes + issuerData.bytes + counter.bytes(4)).sign(issuerPrivateKey)";
-    final counter = 1;
-
-    TangemSdk.writeIssuerExtraData(
-        _callback, issuerData.toHexString(), startingSignature.toHexString(), finalizingSignature.toHexString(), {
-      TangemSdk.cid: _cardId,
-      TangemSdk.issuerDataCounter: counter,
-    });
-  }
-
-  handleReadUserData() {
-    TangemSdk.readUserData(_callback, {TangemSdk.cid: _cardId});
-  }
-
-  handleWriteUserData() {
-    final userData = "User data to be written on a card";
-    final userCounter = 1;
-
-    TangemSdk.writeUserData(_callback, userData.toHexString(), {
-      TangemSdk.cid: _cardId,
-      TangemSdk.userCounter: userCounter,
-    });
-  }
-
-  handleWriteUserProtectedData() {
-    final userProtectedData = "Protected user data to be written on a card";
-    final protectedCounter = 1;
-
-    TangemSdk.writeUserProtectedData(_callback, userProtectedData.toHexString(), {
-      TangemSdk.cid: _cardId,
-      TangemSdk.userProtectedCounter: protectedCounter,
-    });
+    final json = {
+      "method": "sign_hash",
+      "params": <String, dynamic>{
+        "walletPublicKey": _walletPublicKey,
+        "hash": "f1642bb080e1f320924dde7238c1c5f8",
+      },
+    };
+    _launchJSONRPCRequest(json, _cardId);
   }
 
   handleCreateWallet() {
-    TangemSdk.createWallet(_callback, {TangemSdk.cid: _cardId});
+    if (_cardId == null) {
+      _showToast("Scan the card");
+      return;
+    }
+
+    _showToast("Only for: Secp256k1");
+    final json = {
+      "id": 3,
+      "method": "create_wallet",
+      "params": <String, dynamic>{
+        "curve": "Secp256k1",
+      },
+    };
+    _launchJSONRPCRequest(json, _cardId);
   }
 
   handlePurgeWallet() {
-    TangemSdk.purgeWallet(_callback, {TangemSdk.cid: _cardId});
+    if (_cardId == null || _walletPublicKey == null) {
+      _showToast("Scan the card or create a wallet");
+      return;
+    }
+
+    final json = {
+      "id": 4,
+      "method": "purge_wallet",
+      "params": <String, dynamic>{
+        "walletPublicKey": _walletPublicKey,
+      },
+    };
+    _launchJSONRPCRequest(json, _cardId);
   }
 
-  handleSetPin1() {
-    TangemSdk.setPinCode(PinType.PIN1, _callback, {TangemSdk.cid: _cardId});
+  handleSetAccessCode() {
+    if (_cardId == null) {
+      _showToast("Scan the card");
+      return;
+    }
+
+    final json = {
+      "method": "set_accesscode",
+      "params": <String, dynamic>{"accessCode": "ABCDEFGH"},
+    };
+    _launchJSONRPCRequest(json, _cardId);
   }
 
-  handleSetPin2() {
-    TangemSdk.setPinCode(PinType.PIN2, _callback, {TangemSdk.cid: _cardId});
+  handleSetPasscode() {
+    if (_cardId == null) {
+      _showToast("Scan the card");
+      return;
+    }
+
+    final json = {
+      "method": "set_passcode",
+      "params": <String, dynamic>{"passcode": "ABCDEFGH"},
+    };
+    _launchJSONRPCRequest(json, _cardId);
   }
 
   _showToast(String message) {

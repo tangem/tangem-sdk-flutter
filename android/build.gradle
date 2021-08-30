@@ -18,7 +18,8 @@ rootProject.allprojects {
   repositories {
     google()
     jcenter()
-    maven { url 'https://jitpack.io' }
+    maven {url "https://nexus.tangem-tech.com/repository/maven-releases/"}
+    maven {url 'https://jitpack.io'}
   }
 }
 
@@ -43,9 +44,8 @@ android {
 dependencies {
   implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
-  implementation 'com.github.Tangem.tangem-sdk-android:tangem-core:0.11.0'
-  implementation 'com.github.Tangem.tangem-sdk-android:tangem-sdk:0.11.0'
-  implementation "com.squareup.sqldelight:android-driver:1.4.0"
+  implementation 'com.tangem.tangem-sdk-kotlin:core:develop-62'
+  implementation 'com.tangem.tangem-sdk-kotlin:android:develop-62'
 
   implementation 'com.google.code.gson:gson:2.8.6'
   implementation 'androidx.appcompat:appcompat:1.2.0'
