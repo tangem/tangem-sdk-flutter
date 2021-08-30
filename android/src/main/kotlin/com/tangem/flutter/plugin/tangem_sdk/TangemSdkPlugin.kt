@@ -4,26 +4,22 @@ import android.app.Activity
 import android.os.Handler
 import android.os.Looper
 import androidx.annotation.NonNull
-import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
-import com.google.gson.reflect.TypeToken
-import com.squareup.sqldelight.android.AndroidSqliteDriver
 import com.tangem.*
-import com.tangem.commands.common.ResponseConverter
-import com.tangem.commands.personalization.entities.Acquirer
-import com.tangem.commands.personalization.entities.CardConfig
-import com.tangem.commands.personalization.entities.Issuer
-import com.tangem.commands.personalization.entities.Manufacturer
-import com.tangem.common.CardValuesDbStorage
 import com.tangem.common.CompletionResult
-import com.tangem.common.extensions.CardType
-import com.tangem.common.extensions.calculateSha256
+import com.tangem.common.card.FirmwareVersion
+import com.tangem.common.core.CardSession
+import com.tangem.common.core.Config
+import com.tangem.common.core.TangemSdkError
 import com.tangem.common.extensions.hexToBytes
+import com.tangem.common.json.MoshiJsonConverter
+import com.tangem.common.services.secure.SecureStorage
 import com.tangem.tangem_sdk_new.DefaultSessionViewDelegate
 import com.tangem.tangem_sdk_new.NfcLifecycleObserver
-import com.tangem.tangem_sdk_new.TerminalKeysStorage
+import com.tangem.tangem_sdk_new.extensions.createLogger
 import com.tangem.tangem_sdk_new.extensions.localizedDescription
 import com.tangem.tangem_sdk_new.nfc.NfcManager
+import com.tangem.tangem_sdk_new.storage.create
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -32,236 +28,100 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import org.spongycastle.jce.ECNamedCurveTable
 import java.lang.ref.WeakReference
-import java.math.BigInteger
 import java.util.*
 
 /** TangemSdkPlugin */
-public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
+class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 
   private val handler = Handler(Looper.getMainLooper())
-  private val converter = ResponseConverter()
+  private lateinit var wActivity: WeakReference<Activity>
+
   private lateinit var sdk: TangemSdk
-  private var replyAlreadySubmit = false;
+  private var cardSession: CardSession? = null
+
+  private var replyAlreadySubmit = false
 
   override fun onAttachedToActivity(pluginBinding: ActivityPluginBinding) {
     val activity = pluginBinding.activity
     wActivity = WeakReference(activity)
-    val hiddenLifecycleReference: HiddenLifecycleReference = pluginBinding.lifecycle as HiddenLifecycleReference
 
-    val nfcManager = NfcManager().apply {
-      setCurrentActivity(activity)
+    val nfcManager = createNfcManager(pluginBinding)
+    val config = Config().apply {
+      linkedTerminal = false
+      filter.allowedCardTypes = listOf(FirmwareVersion.FirmwareType.Sdk)
+    }
+    sdk = TangemSdk(
+        nfcManager.reader,
+        createViewDelegate(activity, nfcManager),
+        SecureStorage.create(activity),
+        config,
+    )
+    Log.addLogger(TangemSdk.createLogger())
+  }
+
+  private fun createNfcManager(pluginBinding: ActivityPluginBinding): NfcManager {
+    val hiddenLifecycleReference: HiddenLifecycleReference = pluginBinding.lifecycle as HiddenLifecycleReference
+    return NfcManager().apply {
+      setCurrentActivity(pluginBinding.activity)
       hiddenLifecycleReference.lifecycle.addObserver(NfcLifecycleObserver(this))
     }
-    val cardManagerDelegate = DefaultSessionViewDelegate(nfcManager.reader).apply { this.activity = activity }
-    val config = Config(cardFilter = CardFilter(EnumSet.of(CardType.Sdk)))
-    val valueStorage = CardValuesDbStorage(AndroidSqliteDriver(Database.Schema, activity.applicationContext,
-        "flutter_cards.db"))
-    val keyStorage = TerminalKeysStorage(activity.application)
-    sdk = TangemSdk(nfcManager.reader, cardManagerDelegate, config, valueStorage, keyStorage)
   }
+
+  private fun createViewDelegate(activity: Activity, nfcManager: NfcManager): SessionViewDelegate =
+      DefaultSessionViewDelegate(nfcManager, nfcManager.reader).apply { this.activity = activity }
 
   override fun onDetachedFromActivity() {
   }
 
   override fun onReattachedToActivityForConfigChanges(pluginBinding: ActivityPluginBinding) {
+    wActivity = WeakReference(pluginBinding.activity)
   }
 
   override fun onDetachedFromActivityForConfigChanges() {
+    wActivity = WeakReference(null)
   }
 
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-    val channel = MethodChannel(flutterPluginBinding.getFlutterEngine().getDartExecutor(), "tangemSdk")
-    channel.setMethodCallHandler(this);
+    val messenger = flutterPluginBinding.binaryMessenger
+    MethodChannel(messenger, "tangemSdk").setMethodCallHandler(this)
   }
 
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
   }
 
+
   override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
     replyAlreadySubmit = false
     when (call.method) {
+      "runJSONRPCRequest" -> runJSONRPCRequest(call, result)
       "allowsOnlyDebugCards" -> allowsOnlyDebugCards(call, result)
-      "scanCard" -> scanCard(call, result)
-      "sign" -> sign(call, result)
-      "readIssuerData" -> readIssuerData(call, result)
-      "writeIssuerData" -> writeIssuerData(call, result)
-      "readIssuerExData" -> readIssuerExtraData(call, result)
-      "writeIssuerExData" -> writeIssuerExtraData(call, result)
-      "readUserData" -> readUserData(call, result)
-      "writeUserData" -> writeUserData(call, result)
-      "writeUserProtectedData" -> writeUserProtectedData(call, result)
-      "createWallet" -> createWallet(call, result)
-      "purgeWallet" -> purgeWallet(call, result)
-      "setPin1" -> setPin1(call, result)
-      "setPin2" -> setPin2(call, result)
-      "normalizeVerify" -> normalizeVerify(call, result)
-      //      "personalize" -> personalize(call, result)
-      //      "depersonalize" -> depersonalize(call, result)
       "getPlatformVersion" -> result.success("Android ${android.os.Build.VERSION.RELEASE}")
       else -> result.notImplemented()
     }
   }
 
-  private fun scanCard(call: MethodCall, result: Result) {
+  private fun runJSONRPCRequest(call: MethodCall, result: Result) {
     try {
-      sdk.scanCard { handleResult(result, it) }
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
+      replyAlreadySubmit = false
+      val stringOfJSONRPCRequest = call.extract<String>("JSONRPCRequest")
 
-  private fun sign(call: MethodCall, result: Result) {
-    try {
-      sdk.sign(hashes(call), cid(call), message(call)) { handleResult(result, it) }
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
+      val callback = callbackWithResult@{ response: String ->
+        if (! replyAlreadySubmit) {
+          replyAlreadySubmit = true
+          handler.post { result.success(response) }
+        }
+      }
 
-  private fun personalize(call: MethodCall, result: Result) {
-    try {
-      val cardConfig = extractObject("cardConfig", call, converter.gson, CardConfig::class.java)
-      val issuer = extractPersonalizeObject("issuer", call, Issuer::class.java)
-      val manufacturer = extractPersonalizeObject("manufacturer", call, Manufacturer::class.java)
-      val acquirer = extractPersonalizeObject("acquirer", call, Acquirer::class.java)
-
-      sdk.personalize(cardConfig, issuer, manufacturer, acquirer, message(call)) { handleResult(result, it) }
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
-
-  private fun depersonalize(call: MethodCall, result: Result) {
-    try {
-      sdk.depersonalize(message(call)) { handleResult(result, it) }
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
-
-  private fun createWallet(call: MethodCall, result: Result) {
-    try {
-      sdk.createWallet(cid(call), message(call)) { handleResult(result, it) }
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
-
-  private fun purgeWallet(call: MethodCall, result: Result) {
-    try {
-      sdk.purgeWallet(cid(call), message(call)) { handleResult(result, it) }
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
-
-  private fun readIssuerData(call: MethodCall, result: Result) {
-    try {
-      sdk.readIssuerData(cid(call), message(call)) { handleResult(result, it) }
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
-
-  private fun writeIssuerData(call: MethodCall, result: Result) {
-    try {
-      val issuerData = hexDataToBytes(call, "issuerData")
-      val dataSignature = hexDataToBytes(call, "issuerDataSignature")
-      val cardId = cid(call)
-      val counter = issuerDataCounter(call)
-
-      sdk.writeIssuerData(
-          cardId,
-          issuerData,
-          dataSignature,
-          counter,
-          message(call)) { handleResult(result, it) }
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
-
-  private fun readIssuerExtraData(call: MethodCall, result: Result) {
-    try {
-      sdk.readIssuerExtraData(cid(call)) { handleResult(result, it) }
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
-
-  private fun writeIssuerExtraData(call: MethodCall, result: Result) {
-    try {
-      // from app
-      val issuerExData = hexDataToBytes(call, "issuerData")
-      val startingSignature = hexDataToBytes(call, "startingSignature")
-      val finalizingSignature = hexDataToBytes(call, "finalizingSignature")
-
-      val cardId = cid(call)
-      val dataCounter = issuerDataCounter(call) ?: 1
-
-      sdk.writeIssuerExtraData(
-          cardId,
-          issuerExData,
-          startingSignature,
-          finalizingSignature,
-          dataCounter,
-          message(call)) { handleResult(result, it) }
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
-
-  private fun readUserData(call: MethodCall, result: Result) {
-    try {
-      sdk.readUserData(cid(call), message(call)) { handleResult(result, it) }
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
-
-  private fun writeUserData(call: MethodCall, result: Result) {
-    try {
-      val userData = hexDataToBytes(call, "userData")
-      sdk.writeUserData(cid(call), userData, userCounter(call), message(call)) { handleResult(result, it) }
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
-
-  private fun setPin1(call: MethodCall, result: Result) {
-    try {
-      sdk.changePin1(cid(call), pinCode(call), message(call)) { handleResult(result, it) }
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
-
-  private fun setPin2(call: MethodCall, result: Result) {
-    try {
-      sdk.changePin2(cid(call), pinCode(call), message(call)) { handleResult(result, it) }
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
-
-  private fun normalizeVerify(call: MethodCall, result: Result) {
-    try {
-//      val key: ByteArray = call.argument<String>("publicKey")
-//      val hash: ByteArray = call.argument<String>("hash")
-      val signature: ByteArray = call.argument<String>("signature") !!.hexToBytes()
-      handleResult(result, CompletionResult.Success(signature.toCanonicalECDSASignature()))
-    } catch (ex: Exception) {
-      handleException(result, ex)
-    }
-  }
-
-  private fun writeUserProtectedData(call: MethodCall, result: Result) {
-    try {
-      val userProtectedData = hexDataToBytes(call, "userProtectedData")
-      sdk.writeUserProtectedData(cid(call), userProtectedData, userProtectedCounter(call), message(call)) {
-        handleResult(result, it)
+      if (cardSession == null) {
+        sdk.startSessionWithJsonRequest(
+            stringOfJSONRPCRequest,
+            call.extractOptional("cardId"),
+            call.extractOptional("initialMessage"),
+            callback
+        )
+      } else {
+        cardSession !!.run(stringOfJSONRPCRequest, callback)
       }
     } catch (ex: Exception) {
       handleException(result, ex)
@@ -270,11 +130,14 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 
   private fun allowsOnlyDebugCards(call: MethodCall, result: Result) {
     try {
-      val name = "isAllowedOnlyDebugCards"
-      assert(call, name)
-      val allowedOnlyDebug = call.argument<Boolean>(name) !!
-      val allowedCardTypes = if (allowedOnlyDebug) EnumSet.of(CardType.Sdk) else EnumSet.allOf(CardType::class.java)
-      sdk.config.cardFilter.allowedCardTypes = allowedCardTypes
+      val allowedOnlyDebug = call.extract<Boolean>("isAllowedOnlyDebugCards")
+      val allowedCardTypes = if (allowedOnlyDebug) {
+        listOf(FirmwareVersion.FirmwareType.Sdk)
+      } else {
+        listOf(FirmwareVersion.FirmwareType.Sdk, FirmwareVersion.FirmwareType.Release)
+      }
+      sdk.config.filter.allowedCardTypes = allowedCardTypes
+      handleResult(result, CompletionResult.Success(true))
     } catch (ex: Exception) {
       handleException(result, ex)
     }
@@ -286,18 +149,19 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 
     when (completionResult) {
       is CompletionResult.Success -> {
-        handler.post { result.success(converter.gson.toJson(completionResult.data)) }
+        handler.post { result.success(converter.toJson(completionResult.data)) }
       }
       is CompletionResult.Failure -> {
         val error = completionResult.error
         val errorMessage = if (error is TangemSdkError) {
-          wActivity.get()?.getString(error.localizedDescription()) ?: error.customMessage
+          val activity = wActivity.get()
+          if (activity == null) error.customMessage else error.localizedDescription(activity)
         } else {
           error.customMessage
         }
         val pluginError = PluginError(error.code, errorMessage)
         handler.post {
-          result.error("${error.code}", errorMessage, converter.gson.toJson(pluginError))
+          result.error("${error.code}", errorMessage, converter.toJson(pluginError))
         }
       }
     }
@@ -310,135 +174,47 @@ public class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     handler.post {
       val code = 9999
       val localizedDescription: String = if (ex is JsonSyntaxException) ex.cause.toString() else ex.toString()
-      result.error("$code", localizedDescription, converter.gson.toJson(PluginError(code, localizedDescription)))
+      result.error("$code", localizedDescription, converter.toJson(PluginError(code, localizedDescription)))
+    }
+  }
+
+  @Throws(PluginException::class)
+  inline fun <reified T> MethodCall.extract(name: String): T {
+    return try {
+      this.extractOptional(name) ?: throw PluginException("MethodCall.extract: no such field: $name, or field is NULL")
+    } catch (ex: Exception) {
+      throw ex as? PluginException ?: PluginException("MethodCall.extractOptional", ex)
+    }
+  }
+
+  inline fun <reified T> MethodCall.extractOptional(name: String): T? {
+    if (! this.hasArgument(name)) return null
+    val argument = this.argument<Any>(name) ?: return null
+
+    if (argument is String && T::class.java == ByteArray::class.java) {
+      return argument.hexToBytes() as T
+    }
+
+    return if (argument is String) {
+      argument as T
+    } else {
+      val json = converter.toJson(argument)
+      converter.fromJson(json) !!
     }
   }
 
   companion object {
-    // Companion methods must be of two types:
-    // for optional request => return if (fieldIsFound) foundField else null
-    // for required parameters request => return if (fieldIsFound) foundField else throw NoSuchFieldException
-    // All exceptions must be handled by an external representative.
-    lateinit var wActivity: WeakReference<Activity>
-
-    @Throws(Exception::class)
-    fun message(call: MethodCall): Message? {
-      if (! call.hasArgument("initialMessage")) return null
-
-      val objMessage = call.argument<Any>("initialMessage")
-      if (objMessage == null || objMessage !is Map<*, *>) return null
-
-      val mapMessage = objMessage.map { (key, value) -> key.toString() to value.toString() }.toMap<String, String>()
-      val header = mapMessage["header"] ?: ""
-      val body = mapMessage["body"] ?: ""
-      return Message(header, body)
-    }
-
-    @Throws(Exception::class)
-    fun cid(call: MethodCall): String? {
-      return call.argument<String>("cid")
-    }
-
-    @Throws(Exception::class)
-    fun hashes(call: MethodCall): Array<ByteArray> {
-      val name = "hashes"
-      assert(call, name)
-
-      val javaList = call.argument(name) as? ArrayList<String>?
-      if (javaList == null || javaList.isEmpty()) throw NoSuchFieldException(name)
-
-      return javaList.map { it.hexToBytes() }.toTypedArray()
-    }
-
-    @Throws(Exception::class)
-    fun issuerDataCounter(call: MethodCall): Int? {
-      return call.argument<Int>("issuerDataCounter")
-    }
-
-    fun userCounter(call: MethodCall): Int? {
-      return call.argument<Int>("userCounter")
-    }
-
-    fun userProtectedCounter(call: MethodCall): Int? {
-      return call.argument<Int>("userProtectedCounter")
-    }
-
-    fun pinCode(call: MethodCall): ByteArray? {
-      if (! call.hasArgument("pinCode")) return null
-
-      return call.argument<String>("pinCode")?.calculateSha256()
-    }
-
-    @Throws(Exception::class)
-    private fun hexDataToBytes(call: MethodCall, name: String): ByteArray {
-      assert(call, name)
-      val hexString = call.argument<String>(name) !!
-      return hexString.hexToBytes()
-    }
-
-    @Throws(Exception::class)
-    private fun <T> extractObject(name: String, call: MethodCall, gson: Gson, type: Class<T>): T {
-      if (! call.hasArgument(name)) throw NoSuchFieldException(name)
-
-      val jsonString = call.argument<String>(name)
-      return gson.fromJson(jsonString, type)
-    }
-
-    @Throws(Exception::class)
-    private fun <T> extractPersonalizeObject(name: String, call: MethodCall, type: Class<T>): T {
-      if (! call.hasArgument(name)) throw NoSuchFieldException(name)
-
-      val gson = Gson()
-      val mapType = object: TypeToken<MutableMap<String, Any?>>() {}.type
-      val argMap: MutableMap<String, Any?> = gson.fromJson(call.argument<String>(name), mapType)
-      val jsonString = when (name) {
-        "issuer" -> {
-          val dataKeyPair = gson.fromJson(argMap["dataKeyPair"].toString(), KeyPairHex::class.java)
-          val transactionKeyPair = gson.fromJson(argMap["transactionKeyPair"].toString(), KeyPairHex::class.java)
-          argMap["dataKeyPair"] = dataKeyPair.convert()
-          argMap["transactionKeyPair"] = transactionKeyPair.convert()
-          gson.toJson(argMap)
-        }
-        "manufacturer" -> {
-          val keyPair = gson.fromJson(argMap["keyPair"].toString(), KeyPairHex::class.java)
-          argMap["keyPair"] = keyPair.convert()
-          gson.toJson(argMap)
-        }
-        "acquirer" -> {
-          val keyPair = gson.fromJson(argMap["keyPair"].toString(), KeyPairHex::class.java)
-          argMap["keyPair"] = keyPair.convert()
-          gson.toJson(argMap)
-        }
-        else -> throw NoSuchFieldException(name)
-      }
-      return gson.fromJson(jsonString, type)
-    }
-
-    @Throws(Exception::class)
-    private fun assert(call: MethodCall, name: String) {
-      if (! call.hasArgument(name)) throw NoSuchFieldException(name)
-    }
+    val converter = MoshiJsonConverter.INSTANCE
   }
 }
 
-data class PluginError(val code: Int, val localizedDescription: String)
-data class KeyPairHex(val publicKey: String, val privateKey: String) {
-  fun convert(): KeyPair = KeyPair(publicKey.hexToBytes(), privateKey.hexToBytes())
-}
+data class PluginError(
+    // code = 1000 - it's the plugin or it's the tangemSdk internal exception
+    // any other value in code greater than 10000 - it's the tangemSdk internal error
+    val code: Int,
+    val localizedDescription: String
+)
 
-fun ByteArray.toCanonicalECDSASignature(): ByteArray {
-  fun isCanonical(s: BigInteger, halfCurveOrder: BigInteger): Boolean = s <= halfCurveOrder
-  if (this.size != 64) throw Exception("Invalid signature length")
-
-  val s = BigInteger(1, this.copyOfRange(32, 64))
-  val ecSpec = ECNamedCurveTable.getParameterSpec("secp256k1")
-  val halfCurveOrder: BigInteger = ecSpec.n shr 1
-
-  if (! isCanonical(s, halfCurveOrder)) {
-    val canonizedS = ecSpec.n.subtract(s)
-    val baS = canonizedS.toByteArray()
-    System.arraycopy(baS, 0, this, 32, baS.size)
-  }
-
-  return this
-}
+class PluginException(
+    message: String, cause: Throwable? = null
+): Exception("TangemSdkPlugin exception. Message: $message", cause)
