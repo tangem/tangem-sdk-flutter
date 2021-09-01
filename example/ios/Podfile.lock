@@ -11,7 +11,7 @@ DEPENDENCIES:
   - Flutter (from `Flutter`)
   - fluttertoast (from `.symlinks/plugins/fluttertoast/ios`)
   - tangem_sdk (from `.symlinks/plugins/tangem_sdk/ios`)
-  - TangemSdk (from `https://github.com/Tangem/tangem-sdk-ios.git`, tag `develop-54`)
+  - TangemSdk (from `https://github.com/Tangem/tangem-sdk-ios.git`, tag `develop-55`)
 
 EXTERNAL SOURCES:
   Flutter:
@@ -22,12 +22,12 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/tangem_sdk/ios"
   TangemSdk:
     :git: https://github.com/Tangem/tangem-sdk-ios.git
-    :tag: develop-54
+    :tag: develop-55
 
 CHECKOUT OPTIONS:
   TangemSdk:
     :git: https://github.com/Tangem/tangem-sdk-ios.git
-    :tag: develop-54
+    :tag: develop-55
 
 SPEC CHECKSUMS:
   Flutter: 434fef37c0980e73bb6479ef766c45957d4b510c
@@ -35,6 +35,6 @@ SPEC CHECKSUMS:
   tangem_sdk: 97097cf99df1252c4973a7bebddbf9010595075c
   TangemSdk: 7a03e776285f3582e36fa9f6036ad5800c9ae9f1
 
-PODFILE CHECKSUM: 53ca8f6da245dbf3c9d14c5995b5a871f52cb635
+PODFILE CHECKSUM: 66136e2584a224afef9ed7ae42fa4b2014d38719
 
 COCOAPODS: 1.10.1
