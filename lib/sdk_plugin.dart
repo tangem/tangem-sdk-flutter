@@ -23,24 +23,19 @@ class TangemSdk {
   }
 
   static Future runJSONRPCRequest(
-    Callback callback,
-    JSONRPCRequest request, [
-    String cardId,
-    Message initialMessage,
-  ]) async {
-    final valuesToExport = <String, dynamic>{"JSONRPCRequest": jsonEncode(request.toJson())};
+      Callback callback,
+      String request, [
+        String cardId,
+        Message initialMessage,
+      ]) async {
+    final valuesToExport = <String, dynamic>{"JSONRPCRequest": request};
     if (cardId != null) valuesToExport["cardId"] = cardId;
     if (initialMessage != null) valuesToExport["initialMessage"] = initialMessage.toJson();
 
     _channel
         .invokeMethod("runJSONRPCRequest", valuesToExport)
-        .then((result) => callback.onSuccess(_createJSONRPCResponse(result)))
+        .then((result) => callback.onSuccess(result))
         .catchError((error) => _sendBackError(callback, error));
-  }
-
-  static dynamic _createJSONRPCResponse(dynamic response) {
-    final jsonResponse = jsonDecode(response);
-    return JSONRPCResponse.fromJson(jsonResponse);
   }
 
   static _sendBackError(Callback callback, dynamic error) {

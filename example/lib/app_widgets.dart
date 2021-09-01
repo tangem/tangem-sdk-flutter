@@ -33,7 +33,7 @@ class ActionType extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        SizedBox(height: 25),
+        SizedBox(height: 15),
         Center(child: Text(name)),
         SizedBox(height: 5),
       ],

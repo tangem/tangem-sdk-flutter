@@ -47,10 +47,8 @@ class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     wActivity = WeakReference(activity)
 
     val nfcManager = createNfcManager(pluginBinding)
-    val config = Config().apply {
-      linkedTerminal = false
-      filter.allowedCardTypes = listOf(FirmwareVersion.FirmwareType.Sdk)
-    }
+    val config = Config().apply { linkedTerminal = false }
+
     sdk = TangemSdk(
         nfcManager.reader,
         createViewDelegate(activity, nfcManager),
