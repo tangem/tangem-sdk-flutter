@@ -4,7 +4,6 @@ import android.app.Activity
 import android.os.Handler
 import android.os.Looper
 import androidx.annotation.NonNull
-import com.google.gson.JsonSyntaxException
 import com.tangem.*
 import com.tangem.common.CompletionResult
 import com.tangem.common.card.FirmwareVersion
@@ -171,7 +170,7 @@ class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 
     handler.post {
       val code = 9999
-      val localizedDescription: String = if (ex is JsonSyntaxException) ex.cause.toString() else ex.toString()
+      val localizedDescription: String = ex.toString()
       result.error("$code", localizedDescription, converter.toJson(PluginError(code, localizedDescription)))
     }
   }
