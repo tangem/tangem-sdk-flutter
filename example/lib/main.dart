@@ -32,8 +32,8 @@ class _CommandListWidgetState extends State<CommandListWidget> {
   final Utils _utils = Utils();
   final _jsonEncoder = JsonEncoder.withIndent('  ');
 
-  String _cardId;
-  String _walletPublicKey;
+  String? _cardId;
+  String? _walletPublicKey;
   String _response = "";
   final _controller = TextEditingController();
 
@@ -57,22 +57,22 @@ class _CommandListWidgetState extends State<CommandListWidget> {
           SizedBox(height: 25),
           RowActions(
             [
-              ActionButton(text: "Scan card", action: _handleScanCard),
-              ActionButton(text: "Sign hash", action: _handleSign),
+              ActionButton("Scan card", _handleScanCard),
+              ActionButton("Sign hash", _handleSign),
             ],
           ),
           ActionType("Wallet"),
           RowActions(
             [
-              ActionButton(text: "Create", action: _handleCreateWallet),
-              ActionButton(text: "Purge", action: _handlePurgeWallet),
+              ActionButton("Create", _handleCreateWallet),
+              ActionButton("Purge", _handlePurgeWallet),
             ],
           ),
           ActionType("Pins"),
           RowActions(
             [
-              ActionButton(text: "Set access code", action: _handleSetAccessCode),
-              ActionButton(text: "Set passcode", action: _handleSetPasscode),
+              ActionButton("Set access code", _handleSetAccessCode),
+              ActionButton("Set passcode", _handleSetPasscode),
             ],
           ),
           SizedBox(height: 5),
@@ -214,11 +214,11 @@ class _CommandListWidgetState extends State<CommandListWidget> {
     _launchJSONRPCRequest(text.trim(), null, null);
   }
 
-  void _launchJSONRPCRequest(dynamic requestStructure, [String cardId, Message message]) {
-    String request;
+  void _launchJSONRPCRequest(dynamic requestStructure, [String? cardId, Message? message]) {
+    String? request;
     if (requestStructure is String) {
       request = requestStructure;
-    } else if (requestStructure is Map) {
+    } else if (requestStructure is Map<String, dynamic>) {
       request = jsonEncode(JSONRPCRequest.fromJson(requestStructure));
     } else if (requestStructure is List) {
       final requests = requestStructure.map((e) => JSONRPCRequest.fromJson(e)).toList();
@@ -251,7 +251,7 @@ class _CommandListWidgetState extends State<CommandListWidget> {
   }
 
   void _parseResponse(Object decodedResponse) {
-    if (decodedResponse is List) return;
+    if (decodedResponse is List || decodedResponse is! Map<String, dynamic>) return;
 
     JSONRPCResponse jsonRpcResponse;
     try {

@@ -25,8 +25,8 @@ class TangemSdk {
   static Future runJSONRPCRequest(
       Callback callback,
       String request, [
-        String cardId,
-        Message initialMessage,
+        String? cardId,
+        Message? initialMessage,
       ]) async {
     final valuesToExport = <String, dynamic>{"JSONRPCRequest": request};
     if (cardId != null) valuesToExport["cardId"] = cardId;

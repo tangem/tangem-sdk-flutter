@@ -4,8 +4,8 @@ part 'sdk.g.dart';
 
 @JsonSerializable()
 class Message {
-  final String body;
-  final String header;
+  final String? body;
+  final String? header;
 
   Message(this.body, this.header);
 

@@ -24,6 +24,18 @@ class JSONRPCRequest extends JSONRPC {
 }
 
 @JsonSerializable()
+class JSONRPCResponse extends JSONRPC {
+  final dynamic result;
+  final JSONRPCError? error;
+
+  JSONRPCResponse(this.result, this.error, [dynamic id, String jsonrpc = "2.0"]) : super(id, jsonrpc);
+
+  Map<String, dynamic> toJson() => _$JSONRPCResponseToJson(this);
+
+  factory JSONRPCResponse.fromJson(Map<String, dynamic> json) => _$JSONRPCResponseFromJson(json);
+}
+
+@JsonSerializable()
 class JSONRPCError {
   final int code;
   final String message;
@@ -34,16 +46,4 @@ class JSONRPCError {
   Map<String, dynamic> toJson() => _$JSONRPCErrorToJson(this);
 
   factory JSONRPCError.fromJson(Map<String, dynamic> json) => _$JSONRPCErrorFromJson(json);
-}
-
-@JsonSerializable()
-class JSONRPCResponse extends JSONRPC {
-  final dynamic result;
-  final JSONRPCError error;
-
-  JSONRPCResponse(this.result, this.error, [dynamic id, String jsonrpc = "2.0"]) : super(id, jsonrpc);
-
-  Map<String, dynamic> toJson() => _$JSONRPCResponseToJson(this);
-
-  factory JSONRPCResponse.fromJson(Map<String, dynamic> json) => _$JSONRPCResponseFromJson(json);
 }
