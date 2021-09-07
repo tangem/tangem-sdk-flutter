@@ -8,8 +8,8 @@ part of 'sdk.dart';
 
 Message _$MessageFromJson(Map<String, dynamic> json) {
   return Message(
-    json['body'] as String,
-    json['header'] as String,
+    json['body'] as String?,
+    json['header'] as String?,
   );
 }
 
