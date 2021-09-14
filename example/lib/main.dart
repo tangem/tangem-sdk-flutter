@@ -129,6 +129,7 @@ class _CommandListWidgetState extends State<CommandListWidget> {
   void _handleScanCard() {
     final json = {
       "id": 1,
+      "jsonrpc": "2.0",
       "method": "scan",
       "params": <String, dynamic>{},
     };
@@ -143,6 +144,7 @@ class _CommandListWidgetState extends State<CommandListWidget> {
 
     final json = {
       "method": "sign_hash",
+      "jsonrpc": "2.0",
       "params": <String, dynamic>{
         "walletPublicKey": _walletPublicKey,
         "hash": "f1642bb080e1f320924dde7238c1c5f8",
@@ -160,6 +162,7 @@ class _CommandListWidgetState extends State<CommandListWidget> {
     _showToast("Only for: Secp256k1");
     final json = {
       "id": 3,
+      "jsonrpc": "2.0",
       "method": "create_wallet",
       "params": <String, dynamic>{
         "curve": "Secp256k1",
@@ -176,6 +179,7 @@ class _CommandListWidgetState extends State<CommandListWidget> {
 
     final json = {
       "id": 4,
+      "jsonrpc": "2.0",
       "method": "purge_wallet",
       "params": <String, dynamic>{
         "walletPublicKey": _walletPublicKey,
@@ -191,6 +195,7 @@ class _CommandListWidgetState extends State<CommandListWidget> {
     }
 
     final json = {
+      "jsonrpc": "2.0",
       "method": "set_accesscode",
       "params": <String, dynamic>{"accessCode": "ABCDEFGH"},
     };
@@ -204,6 +209,7 @@ class _CommandListWidgetState extends State<CommandListWidget> {
     }
 
     final json = {
+      "jsonrpc": "2.0",
       "method": "set_passcode",
       "params": <String, dynamic>{"passcode": "ABCDEFGH"},
     };
