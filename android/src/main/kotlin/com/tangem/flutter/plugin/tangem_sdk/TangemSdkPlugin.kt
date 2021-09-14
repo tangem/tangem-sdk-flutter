@@ -46,13 +46,12 @@ class TangemSdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     wActivity = WeakReference(activity)
 
     val nfcManager = createNfcManager(pluginBinding)
-    val config = Config().apply { linkedTerminal = false }
 
     sdk = TangemSdk(
         nfcManager.reader,
         createViewDelegate(activity, nfcManager),
         SecureStorage.create(activity),
-        config,
+        Config(),
     )
     Log.addLogger(TangemSdk.createLogger())
   }
