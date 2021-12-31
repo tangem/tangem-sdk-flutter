@@ -1,3 +1,7 @@
+## 0.7.0
+
+* Update with tangem-sdk-android 3.5.0 version
+
 ## 0.1.2
 
 * Fixed mapping of the firmwareVersion
