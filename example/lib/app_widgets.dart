@@ -50,7 +50,7 @@ class ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      child: RaisedButton(
+      child: ElevatedButton(
         child: Text(text),
         onPressed: action,
       ),
