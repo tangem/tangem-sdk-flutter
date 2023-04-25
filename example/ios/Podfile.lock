@@ -28,12 +28,12 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/tangem_sdk/ios"
 
 SPEC CHECKSUMS:
-  Flutter: 434fef37c0980e73bb6479ef766c45957d4b510c
-  fluttertoast: 6122fa75143e992b1d3470f61000f591a798cc58
+  Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
+  fluttertoast: eb263d302cc92e04176c053d2385237e9f43fad0
   tangem_sdk: cf93c041895da326f0e5ab464edffa5fbfe3bc47
   TangemSdk: 2fffafcc3b4594bab564520f527542eeb15657f5
   Toast: 91b396c56ee72a5790816f40d3a94dd357abc196
 
 PODFILE CHECKSUM: 2b113425fe0508a6c735d13359e7ada4cb88df05
 
-COCOAPODS: 1.11.2
+COCOAPODS: 1.11.3
