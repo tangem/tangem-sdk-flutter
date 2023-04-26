@@ -38,11 +38,13 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
         
         let cardId: String? = getArg(for: .cardId, from: args)
         let initialMessage: String? = getArg(for: .initialMessage, from: args)
+        let accessCode: String? = getArg(for: .accessCode, from: args)
         
         let sdk = self.sdk()
         sdk.startSession(with: request,
                          cardId: cardId,
-                         initialMessage: initialMessage) { completion($0) }
+                         initialMessage: initialMessage,
+                         accessCode: accessCode) { completion($0) }
     }
     
     @available(iOS 13.0, *)
@@ -65,6 +67,7 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
 fileprivate enum ArgKey: String {
     case cardId
     case initialMessage
+    case accessCode
     case request = "JSONRPCRequest"
 }
 
