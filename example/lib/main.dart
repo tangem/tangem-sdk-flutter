@@ -220,7 +220,7 @@ class _CommandListWidgetState extends State<CommandListWidget> {
     _launchJSONRPCRequest(text.trim(), null, null);
   }
 
-  void _launchJSONRPCRequest(dynamic requestStructure, [String? cardId, Message? message, String? accessCode]) {
+  void _launchJSONRPCRequest(dynamic requestStructure, [String? cardId, Message? message]) {
     String? request;
     if (requestStructure is String) {
       request = requestStructure;
@@ -244,7 +244,7 @@ class _CommandListWidgetState extends State<CommandListWidget> {
       // it is not expected
     });
 
-    TangemSdk.runJSONRPCRequest(callback, request, cardId, message, accessCode);
+    TangemSdk.runJSONRPCRequest(callback, request, cardId, message);
   }
 
   void _printResponse(Object decodedResponse) {
