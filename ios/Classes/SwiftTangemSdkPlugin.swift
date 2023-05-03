@@ -2,8 +2,8 @@ import Flutter
 import UIKit
 import TangemSdk
 
+@available(iOS 13.0, *)
 public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
-    @available(iOS 13.0, *)
     private lazy var sdk: TangemSdk = {
         let sdk = TangemSdk()
         return sdk
@@ -19,11 +19,7 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
         do {
             switch call.method {
             case "runJSONRPCRequest":
-                if #available(iOS 13.0, *) {
-                    try runJSONRPCRequest(call.arguments, result)
-                } else {
-                    throw FlutterError.iosTooOld
-                }
+                try runJSONRPCRequest(call.arguments, result)
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -34,7 +30,6 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
         }
     }
     
-    @available(iOS 13.0, *)
     private func runJSONRPCRequest(_ args: Any?, _ completion: @escaping FlutterResult) throws {
         guard let request: String = getArg(for: .request, from: args) else {
             throw FlutterError.missingRequest
