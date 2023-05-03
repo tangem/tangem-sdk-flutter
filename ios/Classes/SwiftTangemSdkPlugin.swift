@@ -3,6 +3,12 @@ import UIKit
 import TangemSdk
 
 public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
+    @available(iOS 13.0, *)
+    private lazy var sdk: TangemSdk = {
+        let sdk = TangemSdk()
+        return sdk
+    }()
+    
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "tangemSdk", binaryMessenger: registrar.messenger())
         let instance = SwiftTangemSdkPlugin()
@@ -38,7 +44,6 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
         let initialMessage: String? = getArg(for: .initialMessage, from: args)
         let accessCode: String? = getArg(for: .accessCode, from: args)
         
-        let sdk = TangemSdk()
         sdk.startSession(with: request,
                          cardId: cardId,
                          initialMessage: initialMessage,
