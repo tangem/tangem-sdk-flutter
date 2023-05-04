@@ -27,10 +27,12 @@ class TangemSdk {
       String request, [
         String? cardId,
         Message? initialMessage,
+        String? accessCode,
       ]) async {
     final valuesToExport = <String, dynamic>{"JSONRPCRequest": request};
     if (cardId != null) valuesToExport["cardId"] = cardId;
     if (initialMessage != null) valuesToExport["initialMessage"] = initialMessage.toJson();
+    if (accessCode != null) valuesToExport["accessCode"] = accessCode;
 
     _channel
         .invokeMethod("runJSONRPCRequest", valuesToExport)

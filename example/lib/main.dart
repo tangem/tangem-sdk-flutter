@@ -147,7 +147,7 @@ class _CommandListWidgetState extends State<CommandListWidget> {
       "jsonrpc": "2.0",
       "params": <String, dynamic>{
         "walletPublicKey": _walletPublicKey,
-        "hash": "f1642bb080e1f320924dde7238c1c5f8",
+        "hash": "f1642bb080e1f320924dde7238c1c5f8f1642bb080e1f320924dde7238c1c5f8ff",
       },
     };
     _launchJSONRPCRequest(json, _cardId);

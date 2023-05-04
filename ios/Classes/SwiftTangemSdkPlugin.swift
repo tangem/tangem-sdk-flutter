@@ -3,11 +3,15 @@ import UIKit
 import TangemSdk
 
 public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
-    @available(iOS 13.0, *)
-    private lazy var sdk: TangemSdk = {
-        let sdk = TangemSdk()
-        return sdk
-    }()
+    private var _sdk: Any?
+
+    @available(iOS 13, *)
+    private var sdk: TangemSdk {
+        if _sdk == nil {
+            _sdk = TangemSdk()
+        }
+        return _sdk as! TangemSdk
+    }
     
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "tangemSdk", binaryMessenger: registrar.messenger())
@@ -19,11 +23,7 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
         do {
             switch call.method {
             case "runJSONRPCRequest":
-                if #available(iOS 13.0, *) {
-                    try runJSONRPCRequest(call.arguments, result)
-                } else {
-                    throw FlutterError.iosTooOld
-                }
+                try runJSONRPCRequest(call.arguments, result)
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -34,18 +34,23 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
         }
     }
     
-    @available(iOS 13.0, *)
     private func runJSONRPCRequest(_ args: Any?, _ completion: @escaping FlutterResult) throws {
+        guard #available(iOS 13, *) else {
+            throw FlutterError.iosTooOld
+        }
+
         guard let request: String = getArg(for: .request, from: args) else {
             throw FlutterError.missingRequest
         }
         
         let cardId: String? = getArg(for: .cardId, from: args)
         let initialMessage: String? = getArg(for: .initialMessage, from: args)
+        let accessCode: String? = getArg(for: .accessCode, from: args)
         
         sdk.startSession(with: request,
                          cardId: cardId,
-                         initialMessage: initialMessage) { completion($0) }
+                         initialMessage: initialMessage,
+                         accessCode: accessCode) { completion($0) }
     }
   
     private func getArg<T>(for key: ArgKey, from arguments: Any?) -> T? {
@@ -60,6 +65,7 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
 fileprivate enum ArgKey: String {
     case cardId
     case initialMessage
+    case accessCode
     case request = "JSONRPCRequest"
 }
 
