@@ -2,12 +2,16 @@ import Flutter
 import UIKit
 import TangemSdk
 
-@available(iOS 13.0, *)
 public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
-    private lazy var sdk: TangemSdk = {
-        let sdk = TangemSdk()
-        return sdk
-    }()
+    private var _sdk: Any?
+
+    @available(iOS 13, *)
+    private var sdk: TangemSdk {
+        if _sdk == nil {
+            _sdk = TangemSdk()
+        }
+        return _sdk as! TangemSdk
+    }
     
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "tangemSdk", binaryMessenger: registrar.messenger())
@@ -31,6 +35,10 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
     }
     
     private func runJSONRPCRequest(_ args: Any?, _ completion: @escaping FlutterResult) throws {
+        guard #available(iOS 13, *) else {
+            throw FlutterError.iosTooOld
+        }
+
         guard let request: String = getArg(for: .request, from: args) else {
             throw FlutterError.missingRequest
         }
