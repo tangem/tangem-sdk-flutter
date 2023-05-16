@@ -65,13 +65,15 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
             throw FlutterError.missingVerticalOffset
         }
 
+        let scanTagImage: TangemSdkStyle.ScanTagImage
         if let base64,
             let data = Data(base64Encoded: base64),
             let uiImage = UIImage(data: data) {
-            sdk.config.style.nfcTag = .image(uiImage: uiImage, verticalOffset: verticalOffset)
+            scanTagImage = .image(uiImage: uiImage, verticalOffset: verticalOffset)
         } else {
-            sdk.config.style.nfcTag = .genericCard
+            scanTagImage = .genericCard
         }
+        sdk.config.style.scanTagImage = scanTagImage
     }
   
     private func getArg<T>(for key: ArgKey, from arguments: Any?) -> T? {
