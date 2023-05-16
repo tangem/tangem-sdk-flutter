@@ -22,6 +22,14 @@ class TangemSdk {
     return _channel.invokeMethod("allowsOnlyDebugCards", {"isAllowedOnlyDebugCards": isAllowed});
   }
 
+  static setScanImage(String? base64, double verticalOffset) {
+    final valuesToExport = <String, dynamic>{"verticalOffset": verticalOffset};
+    if (base64 != null) valuesToExport["base64"] = base64;
+
+    _channel
+        .invokeMethod("setScanImage", valuesToExport);
+  }
+
   static Future runJSONRPCRequest(
       Callback callback,
       String request, [

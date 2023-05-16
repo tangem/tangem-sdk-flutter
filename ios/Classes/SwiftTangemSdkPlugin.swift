@@ -24,6 +24,8 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
             switch call.method {
             case "runJSONRPCRequest":
                 try runJSONRPCRequest(call.arguments, result)
+            case "setScanImage":
+                try setScanImage(call.arguments)
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -52,6 +54,25 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
                          initialMessage: initialMessage,
                          accessCode: accessCode) { completion($0) }
     }
+    
+    public func setScanImage(_ args: Any?) throws {
+        guard #available(iOS 13, *) else {
+            return
+        }
+        
+        let base64: String? = getArg(for: .base64, from: args)
+        guard let verticalOffset: Double = getArg(for: .verticalOffset, from: args) else {
+            throw FlutterError.missingVerticalOffset
+        }
+
+        if let base64,
+            let data = Data(base64Encoded: base64),
+            let uiImage = UIImage(data: data) {
+            sdk.config.style.nfcTag = .image(uiImage: uiImage, verticalOffset: verticalOffset)
+        } else {
+            sdk.config.style.nfcTag = .genericCard
+        }
+    }
   
     private func getArg<T>(for key: ArgKey, from arguments: Any?) -> T? {
         if let value = (arguments as? NSDictionary)?[key.rawValue] {
@@ -67,6 +88,8 @@ fileprivate enum ArgKey: String {
     case initialMessage
     case accessCode
     case request = "JSONRPCRequest"
+    case base64
+    case verticalOffset
 }
 
 extension FlutterError: Error {}
@@ -76,6 +99,10 @@ fileprivate extension FlutterError {
     
     static var missingRequest: FlutterError {
         FlutterError(code: genericCode, message: "Missing JSON RPC request", details: nil)
+    }
+    
+    static var missingVerticalOffset: FlutterError {
+        FlutterError(code: genericCode, message: "Missing image vertical offset", details: nil)
     }
     
     static func underlyingError(_ error: Error) -> FlutterError {
