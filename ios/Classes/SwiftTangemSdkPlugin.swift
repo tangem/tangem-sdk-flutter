@@ -61,14 +61,12 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
         }
         
         let base64: String? = getArg(for: .base64, from: args)
-        guard let verticalOffset: Double = getArg(for: .verticalOffset, from: args) else {
-            throw FlutterError.missingVerticalOffset
-        }
 
         let scanTagImage: TangemSdkStyle.ScanTagImage
         if let base64,
             let data = Data(base64Encoded: base64),
             let uiImage = UIImage(data: data) {
+            let verticalOffset: Double = getArg(for: .verticalOffset, from: args) ?? 0
             scanTagImage = .image(uiImage: uiImage, verticalOffset: verticalOffset)
         } else {
             scanTagImage = .genericCard
@@ -101,10 +99,6 @@ fileprivate extension FlutterError {
     
     static var missingRequest: FlutterError {
         FlutterError(code: genericCode, message: "Missing JSON RPC request", details: nil)
-    }
-    
-    static var missingVerticalOffset: FlutterError {
-        FlutterError(code: genericCode, message: "Missing image vertical offset", details: nil)
     }
     
     static func underlyingError(_ error: Error) -> FlutterError {
