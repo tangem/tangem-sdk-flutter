@@ -5,8 +5,8 @@ PODS:
     - Toast
   - tangem_sdk (0.1.0):
     - Flutter
-    - TangemSdk (~> 3.5.0)
-  - TangemSdk (3.5.0)
+    - TangemSdk (~> 3.8.0)
+  - TangemSdk (3.8.0)
   - Toast (4.0.0)
 
 DEPENDENCIES:
@@ -30,8 +30,8 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
   fluttertoast: eb263d302cc92e04176c053d2385237e9f43fad0
-  tangem_sdk: 8f7077862e88209fc04378b1448003013ecf39ee
-  TangemSdk: 340b134be08b4becca2090993ad667509b00acb3
+  tangem_sdk: d46caa527a5656f13ce4cdf3693f50e5f4588341
+  TangemSdk: 34019108337b79c3afc5a7a4b7e67ccb78bf2e1c
   Toast: 91b396c56ee72a5790816f40d3a94dd357abc196
 
 PODFILE CHECKSUM: 305e2d1bdbc553a754d526e5f287ab6f1fbd0aa6

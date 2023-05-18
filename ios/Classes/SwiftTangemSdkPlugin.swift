@@ -24,6 +24,8 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
             switch call.method {
             case "runJSONRPCRequest":
                 try runJSONRPCRequest(call.arguments, result)
+            case "setScanImage":
+                try setScanImage(call.arguments)
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -52,6 +54,25 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
                          initialMessage: initialMessage,
                          accessCode: accessCode) { completion($0) }
     }
+    
+    public func setScanImage(_ args: Any?) throws {
+        guard #available(iOS 13, *) else {
+            return
+        }
+        
+        let base64: String? = getArg(for: .base64, from: args)
+
+        let scanTagImage: TangemSdkStyle.ScanTagImage
+        if let base64,
+            let data = Data(base64Encoded: base64),
+            let uiImage = UIImage(data: data) {
+            let verticalOffset: Double = getArg(for: .verticalOffset, from: args) ?? 0
+            scanTagImage = .image(uiImage: uiImage, verticalOffset: verticalOffset)
+        } else {
+            scanTagImage = .genericCard
+        }
+        sdk.config.style.scanTagImage = scanTagImage
+    }
   
     private func getArg<T>(for key: ArgKey, from arguments: Any?) -> T? {
         if let value = (arguments as? NSDictionary)?[key.rawValue] {
@@ -67,6 +88,8 @@ fileprivate enum ArgKey: String {
     case initialMessage
     case accessCode
     case request = "JSONRPCRequest"
+    case base64
+    case verticalOffset
 }
 
 extension FlutterError: Error {}
