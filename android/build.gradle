@@ -2,7 +2,7 @@ group 'com.tangem.tangem_sdk'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.6.10'
+    ext.kotlin_version = '1.8.0'
     repositories {
         google()
         mavenCentral()
@@ -18,14 +18,16 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven {url 'https://jitpack.io'}
     }
 }
 
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-kapt'
 
 android {
-    compileSdkVersion 31
+    compileSdkVersion 33
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -43,4 +45,18 @@ android {
     defaultConfig {
         minSdkVersion 21
     }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
+    implementation "com.github.tangem.tangem-sdk-android:android:3.8.2"
+    implementation "com.github.tangem.tangem-sdk-android:core:3.8.2"
+
+    implementation 'com.squareup.moshi:moshi:1.12.0'
+    implementation "com.squareup.moshi:moshi-kotlin:1.12.0"
+    kapt("com.squareup.moshi:moshi-kotlin-codegen:1.12.0")
+
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.core:core-ktx:1.10.1'
 }

@@ -1,8 +1,3 @@
-
-import 'tangem_sdk_platform_interface.dart';
-
-class TangemSdk {
-  Future<String?> getPlatformVersion() {
-    return TangemSdkPlatform.instance.getPlatformVersion();
-  }
-}
+export 'extension/string.dart';
+export 'model/sdk.dart';
+export 'tangem_sdk_plugin.dart';

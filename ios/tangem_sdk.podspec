@@ -4,12 +4,12 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'tangem_sdk'
-  s.version          = '0.0.1'
-  s.summary          = 'A new Flutter plugin project.'
+  s.version          = '0.8.0'
+  s.summary          = 'TangemSdk flutter plugin.'
   s.description      = <<-DESC
-A new Flutter plugin project.
+TangemSdk plugin for integration into flutter projects
                        DESC
-  s.homepage         = 'http://example.com'
+  s.homepage         = 'https://tangem.com'
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Your Company' => 'email@example.com' }
   s.source           = { :path => '.' }

@@ -1,6 +1,6 @@
 name: tangem_sdk
-description: A new flutter plugin project.
-version: 0.1.0
+description: TangemSdk flutter plugin.
+version: 0.8.0
 homepage: https://github.com/Tangem/tangem-sdk-flutter
 
 environment:
@@ -11,11 +11,20 @@ dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.0.2
+  convert: ^3.0.0
+  json_annotation: ^4.0.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  build_runner: ^2.0.3
+  json_serializable: ^6.6.1
+
+# generate files for json - https://github.com/dart-lang/json_serializable/tree/master/example
+# command for full generation
+# $ flutter pub get && flutter packages pub run build_runner build
+# command for update
+# $ flutter pub get && flutter packages pub run build_runner watch
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
