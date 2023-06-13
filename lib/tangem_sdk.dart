@@ -1,5 +1,3 @@
-export 'extensions.dart';
-export 'model/json_rpc.dart';
+export 'extension/string.dart';
 export 'model/sdk.dart';
-export 'plugin_error.dart';
-export 'sdk_plugin.dart';
+export 'tangem_sdk_plugin.dart';

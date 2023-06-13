@@ -1,21 +1,71 @@
-import 'package:json_annotation/json_annotation.dart';
-
-part 'sdk.g.dart';
-
-@JsonSerializable()
 class Message {
-  final String? body;
-  final String? header;
+  String? header;
+  String? body;
 
-  Message(this.body, this.header);
+  Message([this.header, this.body]);
 
-  factory Message.body(String body) => Message(body, null);
+  Map<String, dynamic> toJson() => {
+        "header": header,
+        "body": body,
+      };
+}
 
-  factory Message.header(String header) => Message(null, header);
+class ScanTagImage {
+  final String base64;
+  final int verticalOffset;
 
-  factory Message.empty() => Message(null, null);
+  ScanTagImage(this.base64, [this.verticalOffset = 0]);
 
-  factory Message.fromJson(Map<String, dynamic> json) => _$MessageFromJson(json);
+  Map<String, dynamic> toJson() => {
+        "base64": base64,
+        "verticalOffset": verticalOffset,
+      };
+}
 
-  Map<String, dynamic> toJson() => _$MessageToJson(this);
+abstract class JSONRPC {
+  final String jsonrpc = "2.0";
+  final dynamic id;
+
+  JSONRPC([this.id]);
+}
+
+class JSONRPCRequest extends JSONRPC {
+  final String method;
+  final Map<String, dynamic> params;
+
+  JSONRPCRequest(this.method, [this.params = const {}, dynamic id]) : super(id);
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'method': method,
+        'params': params,
+        'id': id,
+        'jsonrpc': jsonrpc,
+      };
+
+  factory JSONRPCRequest.fromJson(Map<String, dynamic> json) => JSONRPCRequest(
+        json['method'] as String,
+        json['params'] as Map<String, dynamic>,
+        json['id'],
+      );
+}
+
+class JSONRPCResponse extends JSONRPC {
+  final dynamic result;
+  final dynamic error;
+
+  JSONRPCResponse(this.result, this.error, [dynamic id]) : super(id);
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'result': result,
+        'error': error,
+        'id': id,
+        'jsonrpc': jsonrpc,
+      };
+
+  factory JSONRPCResponse.fromJson(Map<String, dynamic> json) =>
+      JSONRPCResponse(
+        json['result'],
+        json['error'],
+        json['id'],
+      );
 }

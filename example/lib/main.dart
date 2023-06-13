@@ -1,11 +1,11 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:tangem_sdk/tangem_sdk.dart';
 import 'package:tangem_sdk_example/app_widgets.dart';
-import 'package:tangem_sdk_example/utils.dart';
+import 'package:tangem_sdk_example/source.dart';
 
 void main() {
   runApp(MyApp());
@@ -29,18 +29,28 @@ class CommandListWidget extends StatefulWidget {
 }
 
 class _CommandListWidgetState extends State<CommandListWidget> {
-  final Utils _utils = Utils();
   final _jsonEncoder = JsonEncoder.withIndent('  ');
+
+  static const int ID_UNDEFINED = -1;
+  static const int ID_SCAN = 1;
+  static const int ID_CREATE_WALLET = 2;
+  static const int ID_PURGE_WALLET = 3;
+
+  late TangemSdk _sdk;
+  int _methodId = 10;
 
   String? _cardId;
   String? _walletPublicKey;
+  String? _scanImage;
   String _response = "";
+
   final _controller = TextEditingController();
 
   @override
   void initState() {
     super.initState();
 
+    _sdk = TangemSdk();
     _controller.addListener(() {
       setState(() {});
     });
@@ -59,6 +69,13 @@ class _CommandListWidgetState extends State<CommandListWidget> {
             [
               ActionButton("Scan card", _handleScanCard),
               ActionButton("Sign hash", _handleSign),
+            ],
+          ),
+          ActionType("Set scan image"),
+          RowActions(
+            [
+              ActionButton("Set", _handleSetScanImage),
+              ActionButton("Remove", _handleRemoveScanImage),
             ],
           ),
           ActionType("Wallet"),
@@ -127,141 +144,126 @@ class _CommandListWidgetState extends State<CommandListWidget> {
   }
 
   void _handleScanCard() {
-    final json = {
-      "id": 1,
-      "jsonrpc": "2.0",
-      "method": "scan",
-      "params": <String, dynamic>{},
-    };
-    _launchJSONRPCRequest(json);
+    _execJsonRPCRequest(_makeJsonRpc(SdkMethod.scan));
   }
 
   void _handleSign() {
     if (_cardId == null || _walletPublicKey == null) {
-      _showToast("Scan the card or create a wallet");
+      _notify("Scan the card or create a wallet");
       return;
     }
 
-    final json = {
-      "method": "sign_hash",
-      "jsonrpc": "2.0",
-      "params": <String, dynamic>{
-        "walletPublicKey": _walletPublicKey,
-        "hash": "f1642bb080e1f320924dde7238c1c5f8f1642bb080e1f320924dde7238c1c5f8ff",
-      },
-    };
-    _launchJSONRPCRequest(json, _cardId);
+    final request = _makeJsonRpc(SdkMethod.sign_hash, {
+      "walletPublicKey": _walletPublicKey,
+      "hash": "f1642bb080e1f320924dde7238c1c5f8f1642bb080e1f320924dde7238c1c5f8ff",
+    });
+    _execJsonRPCRequest(request, _cardId);
+  }
+
+  void _handleSetScanImage() {
+    _sdk.setScanImage(ScanTagImage(base64Image)).then((value) {
+      _parseResponse(value);
+      _printResponse(value);
+    }).onError((error, stackTrace) {
+      _printResponse(error);
+    });
+  }
+
+  void _handleRemoveScanImage() {
+    _sdk.setScanImage(null).then((value) {
+      _parseResponse(value);
+      _printResponse(value);
+    }).onError((error, stackTrace) {
+      _printResponse(error);
+    });
   }
 
   void _handleCreateWallet() {
     if (_cardId == null) {
-      _showToast("Scan the card");
+      _notify("Scan the card");
       return;
     }
 
-    _showToast("Only for: Secp256k1");
-    final json = {
-      "id": 3,
-      "jsonrpc": "2.0",
-      "method": "create_wallet",
-      "params": <String, dynamic>{
-        "curve": "Secp256k1",
-      },
-    };
-    _launchJSONRPCRequest(json, _cardId);
+    final request = _makeJsonRpc(SdkMethod.create_wallet, {
+      "curve": "Secp256k1",
+    });
+    _execJsonRPCRequest(request, _cardId);
   }
 
   void _handlePurgeWallet() {
     if (_cardId == null || _walletPublicKey == null) {
-      _showToast("Scan the card or create a wallet");
+      _notify("Scan the card or create a wallet");
       return;
     }
 
-    final json = {
-      "id": 4,
-      "jsonrpc": "2.0",
-      "method": "purge_wallet",
-      "params": <String, dynamic>{
-        "walletPublicKey": _walletPublicKey,
-      },
-    };
-    _launchJSONRPCRequest(json, _cardId);
+    final request = _makeJsonRpc(SdkMethod.purge_wallet, {
+      "walletPublicKey": _walletPublicKey,
+    });
+    _execJsonRPCRequest(request, _cardId);
   }
 
   void _handleSetAccessCode() {
     if (_cardId == null) {
-      _showToast("Scan the card");
+      _notify("Scan the card");
       return;
     }
 
-    final json = {
-      "jsonrpc": "2.0",
-      "method": "set_accesscode",
-      "params": <String, dynamic>{"accessCode": "ABCDEFGH"},
-    };
-    _launchJSONRPCRequest(json, _cardId);
+    final request = _makeJsonRpc(SdkMethod.set_accesscode, {
+      "accessCode": "ABCDEFGH",
+    });
+    _execJsonRPCRequest(request, _cardId);
   }
 
   void _handleSetPasscode() {
     if (_cardId == null) {
-      _showToast("Scan the card");
+      _notify("Scan the card");
       return;
     }
 
-    final json = {
-      "jsonrpc": "2.0",
-      "method": "set_passcode",
-      "params": <String, dynamic>{"passcode": "ABCDEFGH"},
-    };
-    _launchJSONRPCRequest(json, _cardId);
+    final request = _makeJsonRpc(SdkMethod.set_passcode, {
+      "passcode": "ABCDEFGH",
+    });
+    _execJsonRPCRequest(request, _cardId);
   }
 
   void _handleJsonRpc(String text) {
-    _launchJSONRPCRequest(text.trim(), null, null);
+    try {
+      final jsonMap = jsonDecode(text.trim());
+      final request = JSONRPCRequest.fromJson(jsonMap);
+      _execJsonRPCRequest(request, _cardId);
+    } catch (ex) {
+      _notify(ex.toString());
+    }
   }
 
-  void _launchJSONRPCRequest(dynamic requestStructure, [String? cardId, Message? message]) {
-    String? request;
-    if (requestStructure is String) {
-      request = requestStructure;
-    } else if (requestStructure is Map<String, dynamic>) {
-      request = jsonEncode(JSONRPCRequest.fromJson(requestStructure));
-    } else if (requestStructure is List) {
-      final requests = requestStructure.map((e) => JSONRPCRequest.fromJson(e)).toList();
-      request = jsonEncode(requests);
-    }
+  void _execJsonRPCRequest(JSONRPCRequest request, [String? cardId, Message? message, String? accessCode]) {
+    final completeRequest = {
+      "JSONRPCRequest": jsonEncode(request),
+      "cardId": cardId,
+      "initialMessage": message?.toJson(),
+      "accessCode": accessCode,
+    };
 
-    if (request == null) {
-      _showToast("Can't recognize the request structure");
-      return;
-    }
-
-    final callback = Callback((success) {
-      final decodedResponse = jsonDecode(success);
-      _printResponse(decodedResponse);
-      _parseResponse(decodedResponse);
-    }, (error) {
-      // it is not expected
+    _sdk.runJSONRPCRequest(completeRequest).then((value) {
+      _parseResponse(value);
+      _printResponse(value);
+    }).onError((error, stackTrace) {
+      _printResponse(error);
     });
-
-    TangemSdk.runJSONRPCRequest(callback, request, cardId, message);
   }
 
-  void _printResponse(Object decodedResponse) {
-    final prettyJson = _jsonEncoder.convert(decodedResponse);
-    prettyJson.split("\n").forEach((element) => print(element));
+  void _printResponse(Object? decodedResponse) {
+    if (decodedResponse == null) return;
 
     setState(() {
-      _response = prettyJson;
+      _response = _reEncode(decodedResponse);
     });
   }
 
-  void _parseResponse(Object decodedResponse) {
-    if (decodedResponse is List || decodedResponse is! Map<String, dynamic>) return;
-
+  void _parseResponse(String response) {
     JSONRPCResponse jsonRpcResponse;
     try {
-      jsonRpcResponse = JSONRPCResponse.fromJson(decodedResponse);
+      jsonRpcResponse = JSONRPCResponse.fromJson(jsonDecode(response));
     } catch (ex) {
       print(ex.toString());
       return;
@@ -269,7 +271,7 @@ class _CommandListWidgetState extends State<CommandListWidget> {
 
     if (jsonRpcResponse.result != null) {
       switch (jsonRpcResponse.id) {
-        case 1:
+        case ID_SCAN:
           {
             _cardId = jsonRpcResponse.result["cardId"];
             final wallets = jsonRpcResponse.result["wallets"];
@@ -278,12 +280,12 @@ class _CommandListWidgetState extends State<CommandListWidget> {
             }
             break;
           }
-        case 3:
+        case ID_CREATE_WALLET:
           {
             _walletPublicKey = jsonRpcResponse.result["wallet"]["publicKey"];
             break;
           }
-        case 4:
+        case ID_PURGE_WALLET:
           {
             _walletPublicKey = null;
             break;
@@ -292,12 +294,52 @@ class _CommandListWidgetState extends State<CommandListWidget> {
     }
   }
 
-  _showToast(String message) {
-    Fluttertoast.showToast(
-      msg: message,
-      gravity: ToastGravity.BOTTOM,
-      backgroundColor: Colors.black.withOpacity(0.8),
-      toastLength: Toast.LENGTH_LONG,
-    );
+  JSONRPCRequest _makeJsonRpc(SdkMethod method, [Map<String, dynamic> params = const {}]) {
+    return JSONRPCRequest(describeEnum(method), params, _getMethodId(method));
   }
+
+  int _getMethodId(SdkMethod method) {
+    switch (method) {
+      case SdkMethod.scan:
+        return ID_SCAN;
+      case SdkMethod.create_wallet:
+        return ID_CREATE_WALLET;
+      case SdkMethod.purge_wallet:
+        return ID_PURGE_WALLET;
+      default:
+        return _methodId++;
+    }
+  }
+
+  void _notify(String message) {
+    setState(() {
+      _response = message;
+    });
+  }
+
+  String _reEncode(Object value) {
+    if (value is String) {
+      return _jsonEncoder.convert(jsonDecode(value));
+    } else {
+      return _jsonEncoder.convert(value);
+    }
+  }
+// describeEnum
+
+}
+
+enum SdkMethod {
+  scan,
+  sign_hash,
+  sign_hashes,
+  create_wallet,
+  purge_wallet,
+  set_accesscode,
+  set_passcode,
+  reset_usercodes,
+  preflight_read,
+  change_file_settings,
+  delete_files,
+  read_files,
+  write_files,
 }

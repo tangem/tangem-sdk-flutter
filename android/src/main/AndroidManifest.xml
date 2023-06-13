@@ -1,1 +1,3 @@
-<manifest package="com.tangem.flutter.plugin.tangem_sdk"></manifest>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  package="com.tangem.tangem_sdk">
+</manifest>
