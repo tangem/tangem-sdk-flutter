@@ -64,7 +64,7 @@ public class SwiftTangemSdkPlugin: NSObject, FlutterPlugin {
         
         let scanTagImage: TangemSdkStyle.ScanTagImage
         if let base64,
-           let data = Data(base64Encoded: base64),
+           let data = Data(base64Encoded: base64.trimmingCharacters(in: .whitespacesAndNewlines)),
            let uiImage = UIImage(data: data) {
             let verticalOffset: Double = getArg(for: .verticalOffset, from: args) ?? 0
             scanTagImage = .image(uiImage: uiImage, verticalOffset: verticalOffset)
