@@ -161,7 +161,7 @@ class _CommandListWidgetState extends State<CommandListWidget> {
   }
 
   void _handleSetScanImage() {
-    _sdk.setScanImage(ScanTagImage(base64Image)).then((value) {
+    _sdk.setScanImage(ScanTagImage(base64Image, 0)).then((value) {
       _parseResponse(value);
       _printResponse(value);
     }).onError((error, stackTrace) {
