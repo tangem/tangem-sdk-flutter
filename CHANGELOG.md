@@ -1,3 +1,7 @@
+## 0.8.0
+
+* Update with tangem-sdk-android 3.8.2 version
+
 ## 0.7.0
 
 * Update with tangem-sdk-android 3.5.0 version
@@ -8,7 +12,7 @@
 
 ## 0.1.1
 
-* Added canonization for the secp256k1 signature 
+* Added canonization for the secp256k1 signature
 
 ## 0.1.0
 
